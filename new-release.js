@@ -6,7 +6,7 @@ const rnVersion = '^0.63';
 const appName = 'RnDiffApp';
 const appBaseName = 'app-base';
 
-import {execSync} from 'child_process';
+const {execSync} = require('child_process');
 
 execSync(`git worktree add wt-app ${appBaseName}`);
 execSync(`cd wt-app`);
