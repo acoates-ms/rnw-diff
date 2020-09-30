@@ -95,12 +95,12 @@ function guardExisting(rnwVersion) {
   if(getReleases().indexOf(rnwVersion) >= 0)
   {
     console.error(`Already generated diff for ${rnwVersion}`);
-    process.exit(1);
+    process.exit(0);
   }
 }
 
 
-function generateDiffs () {
+function generateDiffs (rnwVersion) {
   const wtDiffsDir = path.resolve(__dirname, 'wt-diffs');
 
   if (!existsSync('wt-diffs')) {
@@ -109,23 +109,17 @@ function generateDiffs () {
 
   execSync('git pull', {cwd: wtDiffsDir, stdio:'inherit'})
 
-  for(let release in getReleases()) {
-    console.log('processing ' + releases);
+  for(let existingRelease of getReleases()) {
+    console.log('processing ' + existingRelease);
+    if (existingRelease === rnwVersion)
+      continue;
+    execSync(`git diff --binary origin/release/cpp/"${existingRelease}"..origin/release/cpp/"${rnwVersion}" > wt-diffs/diffs/"${existingRelease}".."${rnwVersion}".diff`, {stdio: 'inherit'});
+    execSync(`git diff --binary origin/release/cpp/"${rnwVersion}"..origin/release/cpp/"${existingRelease}" > wt-diffs/diffs/"${rnwVersion}".."${existingRelease}".diff`, {stdio: 'inherit'});
   }
-/*
-  IFS=$'\n' GLOBIGNORE='*' command eval 'releases=($(cat "$ReleasesFile"))'
-  for existingRelease in "${releases[@]}"
-  do
-      git diff --binary origin/release/"$existingRelease"..origin/release/"$newRelease" > wt-diffs/diffs/"$existingRelease".."$newRelease".diff
-      git diff --binary origin/release/"$newRelease"..origin/release/"$existingRelease" > wt-diffs/diffs/"$newRelease".."$existingRelease".diff
-  done
 
-  cd wt-diffs
-  git add .
-  git commit -m "Add release $newRelease diffs"
-  git push
-  cd ..
-  */
+  execSync('git add .', {cwd: wtDiffsDir, stdio:'inherit'});
+  execSync(`git commit -m "Add release ${rnwVersion} diffs"`, {cwd: wtDiffsDir, stdio:'inherit'});
+  execSync('git push', {cwd: wtDiffsDir, stdio:'inherit'});
 }
 
 function run() {
@@ -143,9 +137,9 @@ function run() {
   const rnVersion = `^${matches[1]}.${matches[2]}.0`;
 
   guardExisting(rnwVersion);
-  //createNewRelease(rnwVersion, rnVersion);
+  createNewRelease(rnwVersion, rnVersion);
+  generateDiffs(rnwVersion);
   addReleaseToList(rnwVersion);
-  generateDiffs();
 }
 
 run();
