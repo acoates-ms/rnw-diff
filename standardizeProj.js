@@ -50,5 +50,32 @@ function standardizeAppsProjectFile() {
   );
 }
 
+function standardizeAppxManifest() {
+  const appxManPath = `./${appName}/windows/${appName}/Package.appxmanifest`;
+  const appxMan = readFileSync(appxManPath);
+
+  console.log(appxMan.toString());
+
+  writeFileSync(
+    appxManPath,
+    appxMan
+      .toString()
+      .replace(
+        new RegExp(
+          `<Identity[\r\n\t ]+Name="[^"]*"[\r\n\t ]+Publisher="[^"]*"`,
+          "gms"
+        ),
+        '<Identitiy Name="AppSpecificNameHere" Publisher="AppSpecificPublisherHere"'
+      ).replace(
+        new RegExp(
+          `<PublisherDisplayName>.*</PublisherDisplayName>`,
+          "gms"
+        ),
+        '<PublisherDisplayName>AppSpecificPublisherNameHere</PublisherDisplayName>'
+      )
+  );
+}
+
 standardizeSolutionFile();
 standardizeAppsProjectFile();
+standardizeAppxManifest();

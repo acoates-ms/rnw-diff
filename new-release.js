@@ -1,7 +1,7 @@
 // TODO Diffs need to ignore pfx files and android/ios dirs
 
-const newRelease = "0.63.3";
-const rnVersion = "^0.63";
+const newRelease = "0.62.12";
+const rnVersion = "^0.62";
 
 const appName = "RnDiffApp";
 const appBaseName = "app-base";
@@ -35,10 +35,9 @@ execSync(`git checkout -b "${branchName}"`, {cwd: wtAppPath, stdio: 'inherit'});
 execSync(
   `npx react-native init "${appName}" --template react-native@${rnVersion}`, {cwd: wtAppPath, stdio: 'inherit'}
 );
-execSync(`cd ${appName}`);
 execSync(`npx react-native-windows-init --version ${newRelease} --overwrite`, {cwd: appDir, stdio: 'inherit'});
 // Modify some files to prevent new guids being generated and showing up in the diffs
-execSync(`node standardizeProj.js`, {cwd: appDir, stdio: 'inherit'});
+execSync(`node ../standardizeProj.js`, {cwd: wtAppPath, stdio: 'inherit'});
 execSync(`git add ${appName}`, {cwd: wtAppPath, stdio: 'inherit'});
 execSync(`git commit -m "Release cpp/${newRelease}"`, {cwd: wtAppPath, stdio: 'inherit'});
 execSync(
