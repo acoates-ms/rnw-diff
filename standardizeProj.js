@@ -1,8 +1,10 @@
 // @ts-check
 
-const { readFileSync, writeFileSync } = require("fs");
+const { readFileSync, writeFileSync, existsSync } = require("fs");
 // We always use this GUID to represent the apps project guid
 const standardAppProjectGuid = "{UNIQUE00-APP0-GUID-GOES-HERE00000000}";
+// We always use this GUID to represent the apps appx guid
+const appxApplicationGuid =    "{UNIQUE00-APPX-GUID-GOES-HERE00000000}";
 
 const appName = "RnDiffApp";
 let projectGuid = "";
@@ -29,8 +31,11 @@ function standardizeSolutionFile() {
   );
 }
 
-function standardizeAppsProjectFile() {
+function standardizeAppsCppProjectFile() {
   const appProjPath = `./${appName}/windows/${appName}/${appName}.vcxproj`;
+  if (!existsSync(appProjPath)) {
+    return;
+  }
   const appProj = readFileSync(appProjPath);
 
   writeFileSync(
@@ -62,10 +67,16 @@ function standardizeAppxManifest() {
       .toString()
       .replace(
         new RegExp(
+          `<mp:PhoneIdentity[\r\n\t ]+PhoneProductId="[^"]*"[\r\n\t ]+PhonePublisherId="[^"]*"`,
+          "gms"
+        ),
+        `<mp:PhoneIdentity PhoneProductId="${appxApplicationGuid}" PhonePublisherId="AppSpecificPublisherGuidHere"`
+      ).replace(
+        new RegExp(
           `<Identity[\r\n\t ]+Name="[^"]*"[\r\n\t ]+Publisher="[^"]*"`,
           "gms"
         ),
-        '<Identitiy Name="AppSpecificNameHere" Publisher="AppSpecificPublisherHere"'
+        `<Identity Name="${appxApplicationGuid}" Publisher="AppSpecificPublisherHere"`
       ).replace(
         new RegExp(
           `<PublisherDisplayName>.*</PublisherDisplayName>`,
@@ -77,5 +88,5 @@ function standardizeAppxManifest() {
 }
 
 standardizeSolutionFile();
-standardizeAppsProjectFile();
+standardizeAppsCppProjectFile();
 standardizeAppxManifest();
