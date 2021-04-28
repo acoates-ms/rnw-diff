@@ -79,7 +79,7 @@ let releases;
 const releasesFile = path.resolve(__dirname, "RELEASES");
 function getReleases() {
   if (!releases) {
-    releases = readFileSync(releasesFile).toString().split("\n");
+    releases = readFileSync(releasesFile).toString().split("\n").map(_ => _.trim());
   }
 
   return releases;
