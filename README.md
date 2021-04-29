@@ -1,7 +1,5 @@
-# RN diff PURGE
+# react-native-windows diffs
 
-This repository exposes an untouched React Native Windows app generated with the CLI
-`npx react-native init RnDiffApp` then `npx react-native-windows-init`. Each new React Native Windows release will get a new project, removing the old one, and getting a diff between them. This way, the diff is always clean, always in sync with the changes of the init template.
+The purpose of this repository is to help people update their **react-native-windows** applications to new versions.
 
-A dedicated branch per release makes changes very easy
-to watch.
+This repository exposes an untouched **react-native-windows** app generated with the CLI, `npx react-native init RnDiffApp` then `npx react-native-windows-init`. Each new **react-native-windows** release will create a new branch.  Users can get a sense of what changes are required to update **react-native-windows** by going to https://github.com/acoates-ms/rnw-diff/compare/release/cpp/0.63.27...release/cpp/0.64.3, and selecting the versions they are updating from/to.
