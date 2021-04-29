@@ -135,7 +135,8 @@ function run() {
 
   guardExisting(rnwVersion);
   createNewRelease(rnwVersion, rnVersion);
-  generateDiffs(rnwVersion);
+  // No-one using diffs right now
+  //generateDiffs(rnwVersion);
   addReleaseToList(rnwVersion);
 }
 
