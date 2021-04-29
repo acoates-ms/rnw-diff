@@ -3,9 +3,9 @@
 const { execSync } = require("child_process");
 
 function run() {
-  const allVersions = JSON.parse(
-    execSync("npm info react-native-windows versions --json").toString()
-  );
+  const cmd = "npm info react-native-windows versions --json";
+  console.log("Running: " + cmd);
+  const allVersions = JSON.parse(execSync(cmd).toString());
 
   for (let rnwVersion of allVersions) {
     if (rnwVersion.indexOf("-") < 0) {
@@ -15,7 +15,9 @@ function run() {
 
       if (matches[1] === "0" && Number.parseInt(matches[2]) >= 61) {
         // Just do versions 0.61+ for now
-        execSync(`node new-release.js ${rnwVersion}`, { stdio: "inherit" });
+        const newReleaseCmd = `node new-release.js ${rnwVersion}`;
+        console.log("Running: " + newReleaseCmd);
+        execSync(newReleaseCmd, { stdio: "inherit" });
       }
     }
   }
