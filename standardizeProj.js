@@ -16,7 +16,6 @@ function standardizeSolutionFile() {
     `Project.*"${appName}", "${appName}\\\\${appName}.vcxproj", "(.*)"`,
     "mi"
   );
-  console.log('sln contents: \n' + sln)
   const matches = reg.exec(sln.toString());
 
   projectGuid = matches[1];
