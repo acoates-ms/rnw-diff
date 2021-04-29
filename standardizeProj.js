@@ -10,12 +10,11 @@ const appName = "RnDiffApp";
 let projectGuid = "";
 
 function standardizeSolutionFile() {
-  console.log(`Current working directory: ${process.cwd()}`);
   const slnFilePath = `./${appName}/windows/${appName}.sln`;
   const sln = readFileSync(slnFilePath);
   const reg = new RegExp(
     `Project.*"${appName}", "${appName}\\\\${appName}.vcxproj", "(.*)"`,
-    "m"
+    "mi"
   );
   console.log('sln contents: \n' + sln)
   const matches = reg.exec(sln.toString());
