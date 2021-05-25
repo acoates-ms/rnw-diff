@@ -8,13 +8,13 @@ function run() {
   const allVersions = JSON.parse(execSync(cmd).toString());
 
   for (let rnwVersion of allVersions) {
-    if (rnwVersion.indexOf("-") < 0) {
-      // Skip preview versions for now.
 
-      const matches = /(\d+)\.(\d+).(\d+)(-[\w.-_]+)?/.exec(rnwVersion);
+    const matches = /(\d+)\.(\d+).(\d+)(-[\w.-_]+)?/.exec(rnwVersion);
+    const isPrerelease = matches[4] !== undefined;
+    const isPreviewRelease = isPrerelease && matches[4].startsWith('-preview.')
+    const inVersionRange = matches[1] === "0" && Number.parseInt(matches[2]) >= 61;
 
-      if (matches[1] === "0" && Number.parseInt(matches[2]) >= 61) {
-        // Just do versions 0.61+ for now
+    if (inVersionRange && (!isPrerelease || isPreviewRelease)) {
         const newReleaseCmd = `node new-release.js ${rnwVersion}`;
         console.log("Running: " + newReleaseCmd);
         execSync(newReleaseCmd, { stdio: "inherit" });
