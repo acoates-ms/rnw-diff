@@ -132,7 +132,23 @@ function run() {
 
   const npmInfoCmd = `npm info react-native-windows@${rnwVersion} peerDependencies.react-native`;
   console.log("Running: " + npmInfoCmd);
-  const rnVersion = execSync(npmInfoCmd);
+  const rnRequiredVersion = execSync(npmInfoCmd).toString().trim();
+
+  console.log('rnRequiredVersion: ' + rnRequiredVersion);
+
+  const npmRnVersionsCmd = `npm info react-native versions --json`;
+  console.log("Running: " + npmRnVersionsCmd);
+  const rnVersions = JSON.parse(execSync(npmRnVersionsCmd).toString());
+
+  const semver = require("semver");
+  let rnVersion = rnVersions[0];
+  rnVersions.forEach((version) => {
+    if (semver.satisfies(version, rnRequiredVersion)) {
+      if (semver.compare(version, rnVersion) > 0) {
+        rnVersion = version;
+      }
+    }
+  });
 
   console.log(`rnVersion: ${rnVersion}`);
 
