@@ -8,7 +8,8 @@ const { execSync } = require("child_process");
 function runCmd(cmd, cwd) {
   console.log("Running: " + cmd);
   const opts = cwd ? { cwd: cwd, stdio: "inherit" } : { stdio: "inherit" };
-  return execSync(cmd, opts).toString();
+  const output = execSync(cmd, opts);
+  return output ? output.toString() : null;
 }
 
 function createNewRelease(newRelease, rnVersion) {
