@@ -8,8 +8,7 @@ const { execSync } = require("child_process");
 function runCmd(cmd, cwd) {
   console.log("Running: " + cmd);
   const opts = cwd ? { cwd: cwd, stdio: "inherit" } : { stdio: "inherit" };
-  const output = execSync(cmd, opts);
-  return output ? output.toString() : null;
+  execSync(cmd, opts);
 }
 
 function createNewRelease(newRelease, rnVersion) {
@@ -131,7 +130,11 @@ function run() {
     usageAndExit();
   }
 
-  const rnVersion = runCmd(`npm info react-native-windows@${rnwVersion} peerDependencies.react-native`);
+  const npmInfoCmd = `npm info react-native-windows@${rnwVersion} peerDependencies.react-native`;
+  console.log("Running: " + npmInfoCmd);
+  const rnVersion = execSync(npmInfoCmd);
+
+  console.log(`rnVersion: ${rnVersion}`);
 
   guardExisting(rnwVersion);
   createNewRelease(rnwVersion, rnVersion);
