@@ -1,0 +1,421 @@
+diff --git a/RnDiffApp/ios/Podfile b/RnDiffApp/ios/Podfile
+index 2ea2702..57d3fac 100644
+--- a/RnDiffApp/ios/Podfile
++++ b/RnDiffApp/ios/Podfile
+@@ -1,7 +1,49 @@
+-platform :ios, '10.0'
+-require_relative '../node_modules/react-native/scripts/autolink-ios'
++platform :ios, '9.0'
+ require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+ 
++def add_flipper_pods!(versions = {})
++  versions['Flipper'] ||= '~> 0.33.1'
++  versions['DoubleConversion'] ||= '1.1.7'
++  versions['Flipper-Folly'] ||= '~> 2.1'
++  versions['Flipper-Glog'] ||= '0.3.6'
++  versions['Flipper-PeerTalk'] ||= '~> 0.0.4'
++  versions['Flipper-RSocket'] ||= '~> 1.0'
++
++  pod 'FlipperKit', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/FlipperKitLayoutPlugin', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/SKIOSNetworkPlugin', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/FlipperKitUserDefaultsPlugin', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/FlipperKitReactPlugin', versions['Flipper'], :configuration => 'Debug'
++
++  # List all transitive dependencies for FlipperKit pods
++  # to avoid them being linked in Release builds
++  pod 'Flipper', versions['Flipper'], :configuration => 'Debug'
++  pod 'Flipper-DoubleConversion', versions['DoubleConversion'], :configuration => 'Debug'
++  pod 'Flipper-Folly', versions['Flipper-Folly'], :configuration => 'Debug'
++  pod 'Flipper-Glog', versions['Flipper-Glog'], :configuration => 'Debug'
++  pod 'Flipper-PeerTalk', versions['Flipper-PeerTalk'], :configuration => 'Debug'
++  pod 'Flipper-RSocket', versions['Flipper-RSocket'], :configuration => 'Debug'
++  pod 'FlipperKit/Core', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/CppBridge', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/FBCxxFollyDynamicConvert', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/FBDefines', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/FKPortForwarding', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/FlipperKitHighlightOverlay', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/FlipperKitLayoutTextSearchable', versions['Flipper'], :configuration => 'Debug'
++  pod 'FlipperKit/FlipperKitNetworkPlugin', versions['Flipper'], :configuration => 'Debug'
++end
++
++# Post Install processing for Flipper
++def flipper_post_install(installer)
++  installer.pods_project.targets.each do |target|
++    if target.name == 'YogaKit'
++      target.build_configurations.each do |config|
++        config.build_settings['SWIFT_VERSION'] = '4.1'
++      end
++    end
++  end
++end
++
+ target 'RnDiffApp' do
+   # Pods for RnDiffApp
+   pod 'FBLazyVector', :path => "../node_modules/react-native/Libraries/FBLazyVector"
+diff --git a/RnDiffApp/metro.config.js b/RnDiffApp/metro.config.js
+index 9a16730..d3d8682 100644
+--- a/RnDiffApp/metro.config.js
++++ b/RnDiffApp/metro.config.js
+@@ -9,6 +9,9 @@ const blacklist = require('metro-config/src/defaults/blacklist');
+ 
+ module.exports = {
+   resolver: {
++    resolveRequest: require('react-native-windows/metro-react-native-platform').reactNativePlatformResolver(
++      {windows: 'react-native-windows'},
++    ),
+     blacklistRE: blacklist([
+       // This stops "react-native run-windows" from causing the metro server to crash if its already running
+       new RegExp(
+@@ -23,6 +26,9 @@ module.exports = {
+     ]),
+   },
+   transformer: {
++    // The cli defaults this to a full path to react-native, which bypasses the reactNativePlatformResolver above
++    // Hopefully we can fix the default in the future
++    assetRegistryPath: 'react-native/Libraries/Image/AssetRegistry',
+     getTransformOptions: async () => ({
+       transform: {
+         experimentalImportSupport: false,
+diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
+index d75844d..b6c6b48 100644
+--- a/RnDiffApp/package.json
++++ b/RnDiffApp/package.json
+@@ -12,8 +12,8 @@
+   },
+   "dependencies": {
+     "react": "16.11.0",
+-    "react-native": "^0.62.0-0",
+-    "react-native-windows": "0.62.0-preview.15"
++    "react-native": "0.62.2",
++    "react-native-windows": "0.62.0-preview.1"
+   },
+   "devDependencies": {
+     "@babel/core": "^7.6.2",
+diff --git a/RnDiffApp/packages.config b/RnDiffApp/packages.config
+new file mode 100644
+index 0000000..944c029
+--- /dev/null
++++ b/RnDiffApp/packages.config
+@@ -0,0 +1,5 @@
++﻿<?xml version="1.0" encoding="utf-8"?>
++<packages>
++  <package id="Microsoft.Windows.CppWinRT" version="2.0.200316.3" targetFramework="native" />
++  <package id="Microsoft.UI.Xaml" version="2.3.191129002" targetFramework="native" />
++</packages>
+\ No newline at end of file
+diff --git a/RnDiffApp/windows/rndiffapp.sln b/RnDiffApp/windows/rndiffapp.sln
+index 25b1663..0c23655 100644
+--- a/RnDiffApp/windows/rndiffapp.sln
++++ b/RnDiffApp/windows/rndiffapp.sln
+@@ -45,7 +45,7 @@ Global
+ 		..\node_modules\react-native-windows\JSI\Shared\JSI.Shared.vcxitems*{0cc28589-39e4-4288-b162-97b959f8b843}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Shared\Shared.vcxitems*{2049dbe9-8d13-42c9-ae4b-413ae38fffd0}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Microsoft.ReactNative.SharedManaged\Microsoft.ReactNative.SharedManaged.projitems*{67a1076f-7790-4203-86ea-4402ccb5e782}*SharedItemsImports = 13
+-		..\node_modules\react-native-windows\Microsoft.ReactNative.Cxx\Microsoft.ReactNative.Cxx.vcxitems*{d8a2ba44-0203-41f7-8a1c-b27684ad5936}*SharedItemsImports = 4
++		..\node_modules\react-native-windows\Microsoft.ReactNative.Cxx\Microsoft.ReactNative.Cxx.vcxitems*{da48c3e1-4c1e-4ae2-867a-5eff51dc626a}*SharedItemsImports = 4
+ 		..\node_modules\react-native-windows\JSI\Shared\JSI.Shared.vcxitems*{a62d504a-16b8-41d2-9f19-e2e86019e5e4}*SharedItemsImports = 4
+ 		..\node_modules\react-native-windows\Chakra\Chakra.vcxitems*{c38970c0-5fbf-4d69-90d8-cbac225ae895}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Mso\Mso.vcxitems*{84e05bfa-cbaf-4f0d-bfb6-4ce85742a57e}*SharedItemsImports = 9
+diff --git a/RnDiffApp/windows/rndiffapp/App.cpp b/RnDiffApp/windows/rndiffapp/App.cpp
+index e824609..8a17f37 100644
+--- a/RnDiffApp/windows/rndiffapp/App.cpp
++++ b/RnDiffApp/windows/rndiffapp/App.cpp
+@@ -1,11 +1,8 @@
+ #include "pch.h"
+ 
+ #include "App.h"
+-
+-#include "AutolinkedNativeModules.g.h"
+ #include "ReactPackageProvider.h"
+ 
+-
+ using namespace winrt::rndiffapp;
+ using namespace winrt::rndiffapp::implementation;
+ 
+@@ -34,9 +31,16 @@ App::App() noexcept
+     InstanceSettings().EnableDeveloperMenu(false);
+ #endif
+ 
+-    RegisterAutolinkedNativeModulePackages(PackageProviders()); // Includes any autolinked modules
+-
+     PackageProviders().Append(make<ReactPackageProvider>()); // Includes all modules in this project
+ 
++    REACT_REGISTER_NATIVE_MODULE_PACKAGES(); //code-gen macro from autolink
++
+     InitializeComponent();
++
++    // This works around a cpp/winrt bug with composable/aggregable types tracked
++    // by 22116519
++    AddRef();
++    m_inner.as<::IUnknown>()->Release();
+ }
++
++
+diff --git a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cpp b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cpp
+deleted file mode 100644
+index 0203d21..0000000
+--- a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cpp
++++ /dev/null
+@@ -1,13 +0,0 @@
+-// AutolinkedNativeModules.g.cpp contents generated by "react-native autolink-windows"
+-#include "pch.h"
+-#include "AutolinkedNativeModules.g.h"
+-
+-
+-namespace winrt::Microsoft::ReactNative
+-{
+-
+-void RegisterAutolinkedNativeModulePackages(winrt::Windows::Foundation::Collections::IVector<winrt::Microsoft::ReactNative::IReactPackageProvider> const& packageProviders)
+-{
+-}
+-
+-}
+diff --git a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.h b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.h
+deleted file mode 100644
+index 7b18bc4..0000000
+--- a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.h
++++ /dev/null
+@@ -1,10 +0,0 @@
+-// AutolinkedNativeModules.g.h contents generated by "react-native autolink-windows"
+-#pragma once
+-
+-
+-namespace winrt::Microsoft::ReactNative
+-{
+-
+-void RegisterAutolinkedNativeModulePackages(winrt::Windows::Foundation::Collections::IVector<winrt::Microsoft::ReactNative::IReactPackageProvider> const& packageProviders);
+-
+-}
+diff --git a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp
+index e0ab383..0df1ed9 100644
+--- a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp
++++ b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp
+@@ -2,7 +2,6 @@
+ #include "ReactPackageProvider.h"
+ #include "NativeModules.h"
+ 
+-
+ using namespace winrt::Microsoft::ReactNative;
+ 
+ namespace winrt::rndiffapp::implementation
+diff --git a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h
+index 5e3a0f9..1cfd8f4 100644
+--- a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h
++++ b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h
+@@ -2,7 +2,6 @@
+ 
+ #include "winrt/Microsoft.ReactNative.h"
+ 
+-
+ namespace winrt::rndiffapp::implementation
+ {
+     struct ReactPackageProvider : winrt::implements<ReactPackageProvider, winrt::Microsoft::ReactNative::IReactPackageProvider>
+diff --git a/RnDiffApp/windows/rndiffapp/nativeModules.g.h b/RnDiffApp/windows/rndiffapp/nativeModules.g.h
+new file mode 100644
+index 0000000..049a8c9
+--- /dev/null
++++ b/RnDiffApp/windows/rndiffapp/nativeModules.g.h
+@@ -0,0 +1,2 @@
++// NativeModules.g.h -- contents generated by "react-native run-windows"
++#define REACT_REGISTER_NATIVE_MODULE_PACKAGES()
+\ No newline at end of file
+diff --git a/RnDiffApp/windows/rndiffapp/pch.h b/RnDiffApp/windows/rndiffapp/pch.h
+index 13f3eec..379e0b4 100644
+--- a/RnDiffApp/windows/rndiffapp/pch.h
++++ b/RnDiffApp/windows/rndiffapp/pch.h
+@@ -24,3 +24,5 @@
+ #include <winrt/Microsoft.UI.Xaml.Controls.h>
+ #include <winrt/Microsoft.UI.Xaml.Media.h>
+ #include <winrt/Microsoft.UI.Xaml.XamlTypeInfo.h>
++
++#include "nativeModules.g.h"
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj b/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
+index b78f57f..072064f 100644
+--- a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
++++ b/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
+@@ -19,6 +19,9 @@
+     <PackageCertificateThumbprint>UniqueThumbPrintHere</PackageCertificateThumbprint>
+     <PackageCertificatePassword>password</PackageCertificatePassword>
+   </PropertyGroup>
++  <PropertyGroup>
++    <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'node_modules\react-native-windows\package.json'))\node_modules\react-native-windows\</ReactNativeWindowsDir>
++  </PropertyGroup>
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+   <ItemGroup Label="ProjectConfigurations">
+     <ProjectConfiguration Include="Debug|ARM">
+@@ -70,6 +73,9 @@
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+   <ImportGroup Label="ExtensionSettings">
+   </ImportGroup>
++  <ImportGroup Label="Shared">
++    <Import Project="$(ReactNativeWindowsDir)\Microsoft.ReactNative.Cxx\Microsoft.ReactNative.Cxx.vcxitems" Label="Shared" />
++  </ImportGroup>
+   <ImportGroup Label="PropertySheets">
+     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+   </ImportGroup>
+@@ -99,7 +105,6 @@
+   </ItemDefinitionGroup>
+   <ItemGroup>
+     <ClInclude Include="ReactPackageProvider.h" />
+-    <ClInclude Include="AutolinkedNativeModules.g.h" />
+     <ClInclude Include="pch.h" />
+     <ClInclude Include="App.h">
+       <DependentUpon>App.xaml</DependentUpon>
+@@ -126,7 +131,6 @@
+   </ItemGroup>
+   <ItemGroup>
+     <ClCompile Include="ReactPackageProvider.cpp" />
+-    <ClCompile Include="AutolinkedNativeModules.g.cpp" />
+     <ClCompile Include="pch.cpp">
+       <PrecompiledHeader>Create</PrecompiledHeader>
+     </ClCompile>
+@@ -147,21 +151,16 @@
+       <DeploymentContent>false</DeploymentContent>
+     </Text>
+   </ItemGroup>
++  <ItemGroup>
++    <ProjectReference Include="$(ReactNativeWindowsDir)\Microsoft.ReactNative\Microsoft.ReactNative.vcxproj">
++      <Project>{f7d32bd0-2749-483e-9a0d-1635ef7e3136}</Project>
++    </ProjectReference>
++  </ItemGroup>
++
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+-  <PropertyGroup Label="ReactNativeWindowsNodeProps">
+-    <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'node_modules\react-native-windows\package.json'))\node_modules\react-native-windows\</ReactNativeWindowsDir>
+-  </PropertyGroup>
+-  <ImportGroup Label="ReactNativeWindowsNodeTargets">
+-    <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.props" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.props')" />
+-    <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.targets" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.targets')" />
+-  </ImportGroup>
+-  <Target Name="EnsureReactNativeWindowsNodeTargets" BeforeTargets="PrepareForBuild">
+-    <PropertyGroup>
+-      <ErrorText>This project references targets in your node_modules\react-native-windows folder. The missing file is {0}.</ErrorText>
+-    </PropertyGroup>
+-    <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.props')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.props'))" />
+-    <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.targets'))" />
+-  </Target>
++  <Import Project="$(ReactNativeWindowsDir)\PropertySheets\Bundle.props" />
++  <Import Project="$(ReactNativeWindowsDir)\PropertySheets\Bundle.Cpp.targets"/>
++
+   <ImportGroup Label="ExtensionTargets">
+     <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.200316.3\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.200316.3\build\native\Microsoft.Windows.CppWinRT.targets')" />
+     <Import Project="..\packages\Microsoft.UI.Xaml.2.3.191129002\build\native\Microsoft.UI.Xaml.targets" Condition="Exists('..\packages\Microsoft.UI.Xaml.2.3.191129002\build\native\Microsoft.UI.Xaml.targets')" />
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters b/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters
+index 86bc8d7..13a1efb 100644
+--- a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters
++++ b/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters
+@@ -11,13 +11,11 @@
+     <ClCompile Include="App.cpp" />
+     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+     <ClCompile Include="ReactPackageProvider.cpp" />
+-    <ClCompile Include="AutolinkedNativeModules.g.cpp" />
+   </ItemGroup>
+   <ItemGroup>
+     <ClInclude Include="pch.h" />
+     <ClInclude Include="App.h" />
+     <ClInclude Include="ReactPackageProvider.h" />
+-    <ClInclude Include="AutolinkedNativeModules.g.h" />
+   </ItemGroup>
+   <ItemGroup>
+     <Image Include="Assets\Wide310x150Logo.scale-200.png">
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp_TemporaryKey.pfx b/RnDiffApp/windows/rndiffapp/rndiffapp_TemporaryKey.pfx
+index e5a00a2b0676767a7a34fc3fd44a33e8e11d9391..cc9212500d0bff1b1a7543c70d8fe6dd1d922a10 100644
+GIT binary patch
+delta 2355
+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
+ZG_0Fpy&5fCdU<d-N}3se+FJqw2hdLLRsaA1
+
+delta 2355
+zcmV-33C#Ak6t)zQXn!B#?XbZ7bG`xs2haq91lY6tm>AOf#Ut`8*NjqB6LTNxvp2Ur
+zG?^4|7UsDKB&Vt9@DTo(&VNR$4nt(6@C^@%x`=HhrAz}dQp1S~-5bwdpCr2$`kBok
+zZ500<#_CDL)w{*(O&iSM7IQM9PqM<eKE)@Nc#Rn1$y7XgMSpn3eQGbCmx6US-!6Pe
+z*b!o4DZpWj>5c<%FhH`~k;S<{>sWdj*5TQ|ZJay*uuoWz3;0vLM?uTSFEPk*Si<#e
+z%8toIOWrlwbzWh9Fipe!<TTj>Xpz_Bm={*!s%kyeDX!bumnz3GzodEq5{qbmf`}Ak
+zJ#4!%3jrO&fq!O2o%^A3s@y?L-K|0Urh%&_+$YZSncK}BnY4}w?zh~Bq1Qpmi)gXR
+zC9S!-*Psp>gP|j9Sz20szIWaAduLW@m|ED;K!Zyj_<Gf&({Jy0$5>DNPD5$6ke{$L
+znrc7s7jBSxJ0&9?Is|g*R-wo}PHlhogQdIHT6~{{wSQMj@Q^+|x)opII(3d|jT*}3
+zJ1`2^tybsBi|ej5j3f~Yx#)P7uByl8vX1ivikqoSw9QLJ8g4wuZ83knwj|8e*BUYR
+z?fJZw3E|!6hH0mWOrw93AJ)c+o?S?7gP*oq8taODMmq3r1hl(4?2O3JDfJYgV|b@W
+z-U<d734dw2ia!ANP|hpd477j_BDtiz!BUSg7P;9uQfyVI4AO|xI=OXZ)J(l5%f84=
+z*OuPCOgS>E1oiRQV=o@yE`@A>#GOGgBs|ZU|Cm|5S3&%RRvRhp!9xlw$m;@!ns_U$
+z?Mo&p>%LYbaD2E=SSw8z76O|dgsirplc;<S6MrhDapcw-EX7C9l=PJkl#9}<c2CYF
+zCnNO~mM$|`yWMqmM`$@%4jB>t6pixgA_;6ugPMghkcmRBgdP+-18U;YR2Q)yV)4J@
+zfTd<}!4?{w4=prZXXRR7QsdI2s`K0LF9<%FDi`NULXEfE{UtRRQ6zUgXEs9gmzCn@
+zP=CX#9W^mJ!?unySzR><FZ~%zu;EtJG8Q;8ir<rVphkJ2%%MIE@e;70seaA$dK}4L
+zn?J$!(90`85MC9Hr*e{mn=@@^PdLoe&~U|KM6ZH>{;BU3Ve6u=e7~;V_Hanh0HkuJ
+z^^pjG9On#9-U`E<^-GB9>zqd+p(dO`aDTPC_b}a*yTwXR)^NRuEv{%k5evW76#Nx~
+zAIk{v(8`)uqBdLAf_x9gh2QmJ0KWD>WfeF`e8~r-mM%uixHxO0_**>`T)Jjee2o9{
+zP2^9p);nEc4D!`MkH6=4DdTb7`DDYcMhJVtr=_jDnuBN5$xQs*E7+ymeLJ2~=zk2D
+zYOLEqgw`>WH{r5E(-F@xIDZr8Gv6Bzd!TrAu`xOORPyS@NWCT$b8I?NX5nZQQ>E$=
+zg8oD}>%L;5)n5maHFk2SUWZtaJJ!LM0Z)8~QW2u2RFn3qMfzKpB?{mn#Dxv!^YtOV
+z`0E26^?k_Yp(i|jgtNP(YOeA>4}Ua_bzdzPywuD;!$~Bcllr<{5}U`S^V<Bld&5s;
+z`uTVA)&gM-B@eN7Oga7$PE<{#<zt<Wd}+lfGMb!(p1*JB_<}#Z?@IAPw#N4JJ<(mY
+zojM3xjJV;GD^-Sgbtq~e<)OIS?vw@Op!-@bi&a-KfzvP(1_>&LNQU<f0h3+@B1bg<
+zVE{M)IRH5TG5}=&G5{?AFaR<DW&kz-EdVqCH2^pOHUKREVgNJ%W&kk&EdV$GH~=yL
+zVE{G&V*oh-HUKvOGyr4(Ws}DRntv=vo_!rp_4xt<2hf0m1Bm`#tQ)2ewvlsf7YjKi
+zzU(CjsM)3(qfYLuAmE$sjwh#JOZPjeTmV0g4~DaT<H=+$YwvVMFBsrwS&g`{v`J3k
+zAT!#Mz%SmmU}dX@8t)xtEs5r?<{m#*-a{lMbWNEBRgXwQ;KRnXuVGaUbbl!+z94yo
+zxwnS&l%ekPyWR$rqISh1$|RG}ZEbR7Qzi``l`n%24V1ipTHt1Ep`5FJhb7n{tjXg-
+zWqxG{XYjfiTh;bcP$~oE3v4xgfz^mXA#&wa16+CgRZHipk133L;cLUxbvxKXJ7uB@
+z`vgF2Ls^`o_tYmYYCrShV1J*Ui5XLq4gyWgw=MLeY7(U}tH1<^pjM;u!in7>Tu*bu
+zfGb?7Q4cVYM06%aN{qhlZ0K_!&E&0moX80P_Pr(Wmj?1()&wif=1f^en(D6WPB|gM
+zLkjaPS?8BMEGU#KA06ZgKS`2-GTo6@XrM4GY)giW<`V_@EOW27lYgvB%p?2_NT8+$
+z)gPuVA5)6%G9J^~)yc149WzKmBP=y5l5+0owWHnTU(p_!ID%_Qq)n|{5Y}rzz<iUZ
+zlbQ_qW1VtXb#>8rk?%4ZDY7ZTu}TH{8^<@5pF%^R`DoSPjNl=FByEhB04i9Ne<?~E
+zJcii}ihKZZ#IwSNoPUg1M>=V{k7Oo{J0n@`s&Dc>OMtmxx5~A71!`$a>5V&vZS0kG
+zM4agYht027<mmpL7T@m8OeWKR0K`z%@Q&F)1_y1n26P{>Cp(CJPr`Psq=c(Kr#rk!
+z&u0};N1l|H(w{?Lh^fP0ab|E03^}`><r(WtDJ>%lSk2$Mj(_EA+V5%6*(sbiQo4o9
+zm&5-h)Y;$NWj^j>tmOod!6;wOvq`;bDe`KPjPM!7-*d+X+vHURVnHy3vpnO2UjT)6
+z&24q3T3u_m6$}A@>?!8#NcQN9i3alF)vo08X@*tEuh6kGnSLA>zWg}ng0_Xb@eIct
+z@kCx=xH~t|T7TYUW;K!Q!E>i0-CiaI@tO_+AJCFWP#F$GCWN>D2FhtvDO((&xjfgn
+zDxX+@cicVDQ3FN%=G%kvx~rVF!M4o(*4zTKN?s>;3~_c=kgQ|=G=?pDH}wP<vFw3@
+z3dm4KtPQEBl0&-A4eFm`2JQRU-`iLRyz=K?p9mU$JzPnhZNj;_D-^|0K7TBNFIGs5
+zF^&q%)XRaaN}j9<+AupXA20_71uG5%0vZGq&_=uOLGywNtpxw=-f(?GL)^`W1QZoz
+Z7dUFg=5<I$q;(FVY8QzOg%1J(2hcTcY|#J!
+
