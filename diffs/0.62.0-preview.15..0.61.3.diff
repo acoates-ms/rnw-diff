@@ -1,0 +1,1577 @@
+diff --git a/RnDiffApp/.flowconfig b/RnDiffApp/.flowconfig
+index 786366c..4afc766 100644
+--- a/RnDiffApp/.flowconfig
++++ b/RnDiffApp/.flowconfig
+@@ -21,7 +21,7 @@ node_modules/warning/.*
+ [include]
+ 
+ [libs]
+-node_modules/react-native/interface.js
++node_modules/react-native/Libraries/react-native/react-native-interface.js
+ node_modules/react-native/flow/
+ 
+ [options]
+@@ -36,8 +36,9 @@ module.file_ext=.ios.js
+ 
+ munge_underscores=true
+ 
++module.name_mapper='^react-native$' -> '<PROJECT_ROOT>/node_modules/react-native/Libraries/react-native/react-native-implementation'
+ module.name_mapper='^react-native/\(.*\)$' -> '<PROJECT_ROOT>/node_modules/react-native/\1'
+-module.name_mapper='^@?[./a-zA-Z0-9$_-]+\.\(bmp\|gif\|jpg\|jpeg\|png\|psd\|svg\|webp\|m4v\|mov\|mp4\|mpeg\|mpg\|webm\|aac\|aiff\|caf\|m4a\|mp3\|wav\|html\|pdf\)$' -> '<PROJECT_ROOT>/node_modules/react-native/Libraries/Image/RelativeImageStub'
++module.name_mapper='^[./a-zA-Z0-9$_-]+\.\(bmp\|gif\|jpg\|jpeg\|png\|psd\|svg\|webp\|m4v\|mov\|mp4\|mpeg\|mpg\|webm\|aac\|aiff\|caf\|m4a\|mp3\|wav\|html\|pdf\)$' -> '<PROJECT_ROOT>/node_modules/react-native/Libraries/Image/RelativeImageStub'
+ 
+ suppress_type=$FlowIssue
+ suppress_type=$FlowFixMe
+@@ -71,4 +72,4 @@ untyped-import
+ untyped-type-import
+ 
+ [version]
+-^0.113.0
++^0.105.0
+diff --git a/RnDiffApp/.gitignore b/RnDiffApp/.gitignore
+index ad572e6..697e766 100644
+--- a/RnDiffApp/.gitignore
++++ b/RnDiffApp/.gitignore
+@@ -20,6 +20,7 @@ DerivedData
+ *.hmap
+ *.ipa
+ *.xcuserstate
++xcshareddata
+ 
+ # Android/IntelliJ
+ #
+diff --git a/RnDiffApp/App.js b/RnDiffApp/App.js
+index 23cd158..bb77580 100644
+--- a/RnDiffApp/App.js
++++ b/RnDiffApp/App.js
+@@ -3,7 +3,7 @@
+  * https://github.com/facebook/react-native
+  *
+  * @format
+- * @flow strict-local
++ * @flow
+  */
+ 
+ import React from 'react';
+diff --git a/RnDiffApp/android/app/build.gradle b/RnDiffApp/android/app/build.gradle
+index ae67f60..978da91 100644
+--- a/RnDiffApp/android/app/build.gradle
++++ b/RnDiffApp/android/app/build.gradle
+@@ -15,9 +15,7 @@ import com.android.build.OutputFile
+  *   // the name of the generated asset file containing your JS bundle
+  *   bundleAssetName: "index.android.bundle",
+  *
+- *   // the entry file for bundle generation. If none specified and
+- *   // "index.android.js" exists, it will be used. Otherwise "index.js" is
+- *   // default. Can be overridden with ENTRY_FILE environment variable.
++ *   // the entry file for bundle generation
+  *   entryFile: "index.android.js",
+  *
+  *   // https://facebook.github.io/react-native/docs/performance#enable-the-ram-format
+@@ -78,6 +76,7 @@ import com.android.build.OutputFile
+  */
+ 
+ project.ext.react = [
++    entryFile: "index.js",
+     enableHermes: false,  // clean and rebuild if changing
+ ]
+ 
+@@ -163,14 +162,6 @@ android {
+             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+         }
+     }
+-
+-    packagingOptions {
+-        pickFirst "lib/armeabi-v7a/libc++_shared.so"
+-        pickFirst "lib/arm64-v8a/libc++_shared.so"
+-        pickFirst "lib/x86/libc++_shared.so"
+-        pickFirst "lib/x86_64/libc++_shared.so"
+-    }
+-
+     // applicationVariants are e.g. debug, release
+     applicationVariants.all { variant ->
+         variant.outputs.each { output ->
+@@ -189,23 +180,8 @@ android {
+ 
+ dependencies {
+     implementation fileTree(dir: "libs", include: ["*.jar"])
+-    //noinspection GradleDynamicVersion
+     implementation "com.facebook.react:react-native:+"  // From node_modules
+ 
+-    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"
+-
+-    debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}") {
+-      exclude group:'com.facebook.fbjni'
+-    }
+-
+-    debugImplementation("com.facebook.flipper:flipper-network-plugin:${FLIPPER_VERSION}") {
+-        exclude group:'com.facebook.flipper'
+-    }
+-
+-    debugImplementation("com.facebook.flipper:flipper-fresco-plugin:${FLIPPER_VERSION}") {
+-        exclude group:'com.facebook.flipper'
+-    }
+-
+     if (enableHermes) {
+         def hermesPath = "../../node_modules/hermes-engine/android/";
+         debugImplementation files(hermesPath + "hermes-debug.aar")
+diff --git a/RnDiffApp/android/app/src/debug/java/com/rndiffapp/ReactNativeFlipper.java b/RnDiffApp/android/app/src/debug/java/com/rndiffapp/ReactNativeFlipper.java
+deleted file mode 100644
+index 5c106db..0000000
+--- a/RnDiffApp/android/app/src/debug/java/com/rndiffapp/ReactNativeFlipper.java
++++ /dev/null
+@@ -1,72 +0,0 @@
+-/**
+- * Copyright (c) Facebook, Inc. and its affiliates.
+- *
+- * <p>This source code is licensed under the MIT license found in the LICENSE file in the root
+- * directory of this source tree.
+- */
+-package com.rndiffapp;
+-
+-import android.content.Context;
+-import com.facebook.flipper.android.AndroidFlipperClient;
+-import com.facebook.flipper.android.utils.FlipperUtils;
+-import com.facebook.flipper.core.FlipperClient;
+-import com.facebook.flipper.plugins.crashreporter.CrashReporterPlugin;
+-import com.facebook.flipper.plugins.databases.DatabasesFlipperPlugin;
+-import com.facebook.flipper.plugins.fresco.FrescoFlipperPlugin;
+-import com.facebook.flipper.plugins.inspector.DescriptorMapping;
+-import com.facebook.flipper.plugins.inspector.InspectorFlipperPlugin;
+-import com.facebook.flipper.plugins.network.FlipperOkhttpInterceptor;
+-import com.facebook.flipper.plugins.network.NetworkFlipperPlugin;
+-import com.facebook.flipper.plugins.react.ReactFlipperPlugin;
+-import com.facebook.flipper.plugins.sharedpreferences.SharedPreferencesFlipperPlugin;
+-import com.facebook.react.ReactInstanceManager;
+-import com.facebook.react.bridge.ReactContext;
+-import com.facebook.react.modules.network.NetworkingModule;
+-import okhttp3.OkHttpClient;
+-
+-public class ReactNativeFlipper {
+-  public static void initializeFlipper(Context context, ReactInstanceManager reactInstanceManager) {
+-    if (FlipperUtils.shouldEnableFlipper(context)) {
+-      final FlipperClient client = AndroidFlipperClient.getInstance(context);
+-
+-      client.addPlugin(new InspectorFlipperPlugin(context, DescriptorMapping.withDefaults()));
+-      client.addPlugin(new ReactFlipperPlugin());
+-      client.addPlugin(new DatabasesFlipperPlugin(context));
+-      client.addPlugin(new SharedPreferencesFlipperPlugin(context));
+-      client.addPlugin(CrashReporterPlugin.getInstance());
+-
+-      NetworkFlipperPlugin networkFlipperPlugin = new NetworkFlipperPlugin();
+-      NetworkingModule.setCustomClientBuilder(
+-          new NetworkingModule.CustomClientBuilder() {
+-            @Override
+-            public void apply(OkHttpClient.Builder builder) {
+-              builder.addNetworkInterceptor(new FlipperOkhttpInterceptor(networkFlipperPlugin));
+-            }
+-          });
+-      client.addPlugin(networkFlipperPlugin);
+-      client.start();
+-
+-      // Fresco Plugin needs to ensure that ImagePipelineFactory is initialized
+-      // Hence we run if after all native modules have been initialized
+-      ReactContext reactContext = reactInstanceManager.getCurrentReactContext();
+-      if (reactContext == null) {
+-        reactInstanceManager.addReactInstanceEventListener(
+-            new ReactInstanceManager.ReactInstanceEventListener() {
+-              @Override
+-              public void onReactContextInitialized(ReactContext reactContext) {
+-                reactInstanceManager.removeReactInstanceEventListener(this);
+-                reactContext.runOnNativeModulesQueueThread(
+-                    new Runnable() {
+-                      @Override
+-                      public void run() {
+-                        client.addPlugin(new FrescoFlipperPlugin());
+-                      }
+-                    });
+-              }
+-            });
+-      } else {
+-        client.addPlugin(new FrescoFlipperPlugin());
+-      }
+-    }
+-  }
+-}
+diff --git a/RnDiffApp/android/app/src/main/AndroidManifest.xml b/RnDiffApp/android/app/src/main/AndroidManifest.xml
+index 3e43f26..f3e0d15 100644
+--- a/RnDiffApp/android/app/src/main/AndroidManifest.xml
++++ b/RnDiffApp/android/app/src/main/AndroidManifest.xml
+@@ -13,8 +13,7 @@
+       <activity
+         android:name=".MainActivity"
+         android:label="@string/app_name"
+-        android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
+-        android:launchMode="singleTask"
++        android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
+         android:windowSoftInputMode="adjustResize">
+         <intent-filter>
+             <action android:name="android.intent.action.MAIN" />
+diff --git a/RnDiffApp/android/app/src/main/java/com/rndiffapp/MainApplication.java b/RnDiffApp/android/app/src/main/java/com/rndiffapp/MainApplication.java
+index 04df56c..aa691b8 100644
+--- a/RnDiffApp/android/app/src/main/java/com/rndiffapp/MainApplication.java
++++ b/RnDiffApp/android/app/src/main/java/com/rndiffapp/MainApplication.java
+@@ -4,7 +4,6 @@ import android.app.Application;
+ import android.content.Context;
+ import com.facebook.react.PackageList;
+ import com.facebook.react.ReactApplication;
+-import com.facebook.react.ReactInstanceManager;
+ import com.facebook.react.ReactNativeHost;
+ import com.facebook.react.ReactPackage;
+ import com.facebook.soloader.SoLoader;
+@@ -44,28 +43,23 @@ public class MainApplication extends Application implements ReactApplication {
+   public void onCreate() {
+     super.onCreate();
+     SoLoader.init(this, /* native exopackage */ false);
+-    initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
++    initializeFlipper(this); // Remove this line if you don't want Flipper enabled
+   }
+ 
+   /**
+-   * Loads Flipper in React Native templates. Call this in the onCreate method with something like
+-   * initializeFlipper(this, getReactNativeHost().getReactInstanceManager());
++   * Loads Flipper in React Native templates.
+    *
+    * @param context
+-   * @param reactInstanceManager
+    */
+-  private static void initializeFlipper(
+-      Context context, ReactInstanceManager reactInstanceManager) {
++  private static void initializeFlipper(Context context) {
+     if (BuildConfig.DEBUG) {
+       try {
+         /*
+          We use reflection here to pick up the class that initializes Flipper,
+         since Flipper library is not available in release mode
+         */
+-        Class<?> aClass = Class.forName("com.rndiffapp.ReactNativeFlipper");
+-        aClass
+-            .getMethod("initializeFlipper", Context.class, ReactInstanceManager.class)
+-            .invoke(null, context, reactInstanceManager);
++        Class<?> aClass = Class.forName("com.facebook.flipper.ReactNativeFlipper");
++        aClass.getMethod("initializeFlipper", Context.class).invoke(null, context);
+       } catch (ClassNotFoundException e) {
+         e.printStackTrace();
+       } catch (NoSuchMethodException e) {
+diff --git a/RnDiffApp/android/build.gradle b/RnDiffApp/android/build.gradle
+index 5d5d188..28f7ec6 100644
+--- a/RnDiffApp/android/build.gradle
++++ b/RnDiffApp/android/build.gradle
+@@ -12,7 +12,7 @@ buildscript {
+         jcenter()
+     }
+     dependencies {
+-        classpath("com.android.tools.build:gradle:3.5.2")
++        classpath("com.android.tools.build:gradle:3.4.2")
+ 
+         // NOTE: Do not place your application dependencies here; they belong
+         // in the individual module build.gradle files
+@@ -33,6 +33,6 @@ allprojects {
+ 
+         google()
+         jcenter()
+-        maven { url 'https://www.jitpack.io' }
++        maven { url 'https://jitpack.io' }
+     }
+ }
+diff --git a/RnDiffApp/android/gradle.properties b/RnDiffApp/android/gradle.properties
+index 1bbc8cc..027ef9d 100644
+--- a/RnDiffApp/android/gradle.properties
++++ b/RnDiffApp/android/gradle.properties
+@@ -17,12 +17,5 @@
+ # http://www.gradle.org/docs/current/userguide/multi_project_builds.html#sec:decoupled_projects
+ # org.gradle.parallel=true
+ 
+-# AndroidX package structure to make it clearer which packages are bundled with the
+-# Android operating system, and which are packaged with your app's APK
+-# https://developer.android.com/topic/libraries/support-library/androidx-rn
+ android.useAndroidX=true
+-# Automatically convert third-party libraries to use AndroidX
+ android.enableJetifier=true
+-
+-# Version of flipper SDK to use with React Native
+-FLIPPER_VERSION=0.33.1
+diff --git a/RnDiffApp/android/gradle/wrapper/gradle-wrapper.properties b/RnDiffApp/android/gradle/wrapper/gradle-wrapper.properties
+index 1ba7206..e0c4de3 100644
+--- a/RnDiffApp/android/gradle/wrapper/gradle-wrapper.properties
++++ b/RnDiffApp/android/gradle/wrapper/gradle-wrapper.properties
+@@ -1,5 +1,5 @@
+ distributionBase=GRADLE_USER_HOME
+ distributionPath=wrapper/dists
+-distributionUrl=https\://services.gradle.org/distributions/gradle-6.0.1-all.zip
++distributionUrl=https\://services.gradle.org/distributions/gradle-5.5-all.zip
+ zipStoreBase=GRADLE_USER_HOME
+ zipStorePath=wrapper/dists
+diff --git a/RnDiffApp/android/gradlew b/RnDiffApp/android/gradlew
+index 83f2acf..b0d6d0a 100644
+--- a/RnDiffApp/android/gradlew
++++ b/RnDiffApp/android/gradlew
+@@ -7,7 +7,7 @@
+ # you may not use this file except in compliance with the License.
+ # You may obtain a copy of the License at
+ #
+-#      https://www.apache.org/licenses/LICENSE-2.0
++#      http://www.apache.org/licenses/LICENSE-2.0
+ #
+ # Unless required by applicable law or agreed to in writing, software
+ # distributed under the License is distributed on an "AS IS" BASIS,
+@@ -125,8 +125,8 @@ if $darwin; then
+     GRADLE_OPTS="$GRADLE_OPTS \"-Xdock:name=$APP_NAME\" \"-Xdock:icon=$APP_HOME/media/gradle.icns\""
+ fi
+ 
+-# For Cygwin or MSYS, switch paths to Windows format before running java
+-if [ "$cygwin" = "true" -o "$msys" = "true" ] ; then
++# For Cygwin, switch paths to Windows format before running java
++if $cygwin ; then
+     APP_HOME=`cygpath --path --mixed "$APP_HOME"`
+     CLASSPATH=`cygpath --path --mixed "$CLASSPATH"`
+     JAVACMD=`cygpath --unix "$JAVACMD"`
+diff --git a/RnDiffApp/android/gradlew.bat b/RnDiffApp/android/gradlew.bat
+index 9618d8d..9991c50 100644
+--- a/RnDiffApp/android/gradlew.bat
++++ b/RnDiffApp/android/gradlew.bat
+@@ -5,7 +5,7 @@
+ @rem you may not use this file except in compliance with the License.
+ @rem You may obtain a copy of the License at
+ @rem
+-@rem      https://www.apache.org/licenses/LICENSE-2.0
++@rem      http://www.apache.org/licenses/LICENSE-2.0
+ @rem
+ @rem Unless required by applicable law or agreed to in writing, software
+ @rem distributed under the License is distributed on an "AS IS" BASIS,
+diff --git a/RnDiffApp/ios/Podfile b/RnDiffApp/ios/Podfile
+index 2ea2702..50e38d6 100644
+--- a/RnDiffApp/ios/Podfile
++++ b/RnDiffApp/ios/Podfile
+@@ -1,5 +1,4 @@
+-platform :ios, '10.0'
+-require_relative '../node_modules/react-native/scripts/autolink-ios'
++platform :ios, '9.0'
+ require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+ 
+ target 'RnDiffApp' do
+@@ -27,29 +26,20 @@ target 'RnDiffApp' do
+   pod 'React-jsi', :path => '../node_modules/react-native/ReactCommon/jsi'
+   pod 'React-jsiexecutor', :path => '../node_modules/react-native/ReactCommon/jsiexecutor'
+   pod 'React-jsinspector', :path => '../node_modules/react-native/ReactCommon/jsinspector'
+-  pod 'ReactCommon/callinvoker', :path => "../node_modules/react-native/ReactCommon"
++  pod 'ReactCommon/jscallinvoker', :path => "../node_modules/react-native/ReactCommon"
+   pod 'ReactCommon/turbomodule/core', :path => "../node_modules/react-native/ReactCommon"
+-  pod 'Yoga', :path => '../node_modules/react-native/ReactCommon/yoga', :modular_headers => true
++  pod 'Yoga', :path => '../node_modules/react-native/ReactCommon/yoga'
+ 
+   pod 'DoubleConversion', :podspec => '../node_modules/react-native/third-party-podspecs/DoubleConversion.podspec'
+   pod 'glog', :podspec => '../node_modules/react-native/third-party-podspecs/glog.podspec'
+   pod 'Folly', :podspec => '../node_modules/react-native/third-party-podspecs/Folly.podspec'
+ 
+   target 'RnDiffAppTests' do
+-    inherit! :complete
++    inherit! :search_paths
+     # Pods for testing
+   end
+ 
+   use_native_modules!
+-
+-  # Enables Flipper.
+-  #
+-  # Note that if you have use_frameworks! enabled, Flipper will not work and
+-  # you should disable these next few lines.
+-  add_flipper_pods!
+-  post_install do |installer|
+-    flipper_post_install(installer)
+-  end
+ end
+ 
+ target 'RnDiffApp-tvOS' do
+@@ -59,4 +49,5 @@ target 'RnDiffApp-tvOS' do
+     inherit! :search_paths
+     # Pods for testing
+   end
++
+ end
+diff --git a/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj b/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
+index 5b8dd6a..57d48c4 100644
+--- a/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
++++ b/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
+@@ -193,7 +193,7 @@
+ 			dependencies = (
+ 			);
+ 			name = RnDiffApp;
+-			productName = RnDiffApp;
++			productName = "RnDiffApp";
+ 			productReference = 13B07F961A680F5B00A75B9A /* RnDiffApp.app */;
+ 			productType = "com.apple.product-type.application";
+ 		};
+@@ -240,15 +240,13 @@
+ 		83CBB9F71A601CBA00E9B192 /* Project object */ = {
+ 			isa = PBXProject;
+ 			attributes = {
+-				LastUpgradeCheck = 1130;
++				LastUpgradeCheck = 0940;
++				ORGANIZATIONNAME = Facebook;
+ 				TargetAttributes = {
+ 					00E356ED1AD99517003FC87E = {
+ 						CreatedOnToolsVersion = 6.2;
+ 						TestTargetID = 13B07F861A680F5B00A75B9A;
+ 					};
+-					13B07F861A680F5B00A75B9A = {
+-						LastSwiftMigration = 1120;
+-					};
+ 					2D02E47A1E0B4A5D006451C7 = {
+ 						CreatedOnToolsVersion = 8.2.1;
+ 						ProvisioningStyle = Automatic;
+@@ -262,7 +260,7 @@
+ 			};
+ 			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "RnDiffApp" */;
+ 			compatibilityVersion = "Xcode 3.2";
+-			developmentRegion = en;
++			developmentRegion = English;
+ 			hasScannedForEncodings = 0;
+ 			knownRegions = (
+ 				en,
+@@ -492,13 +490,8 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+-				CLANG_ENABLE_MODULES = YES;
+ 				CURRENT_PROJECT_VERSION = 1;
+-				ENABLE_BITCODE = NO;
+-				GCC_PREPROCESSOR_DEFINITIONS = (
+-					"$(inherited)",
+-					"FB_SONARKIT_ENABLED=1",
+-				);
++				DEAD_CODE_STRIPPING = NO;
+ 				INFOPLIST_FILE = RnDiffApp/Info.plist;
+ 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+ 				OTHER_LDFLAGS = (
+@@ -508,8 +501,6 @@
+ 				);
+ 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+ 				PRODUCT_NAME = RnDiffApp;
+-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+-				SWIFT_VERSION = 5.0;
+ 				VERSIONING_SYSTEM = "apple-generic";
+ 			};
+ 			name = Debug;
+@@ -518,7 +509,6 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+-				CLANG_ENABLE_MODULES = YES;
+ 				CURRENT_PROJECT_VERSION = 1;
+ 				INFOPLIST_FILE = RnDiffApp/Info.plist;
+ 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+@@ -529,7 +519,6 @@
+ 				);
+ 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+ 				PRODUCT_NAME = RnDiffApp;
+-				SWIFT_VERSION = 5.0;
+ 				VERSIONING_SYSTEM = "apple-generic";
+ 			};
+ 			name = Release;
+@@ -553,7 +542,7 @@
+ 					"-ObjC",
+ 					"-lc++",
+ 				);
+-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.RnDiffApp-tvOS";
++				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.REACT.RnDiffApp-tvOS";
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+ 				SDKROOT = appletvos;
+ 				TARGETED_DEVICE_FAMILY = 3;
+@@ -580,7 +569,7 @@
+ 					"-ObjC",
+ 					"-lc++",
+ 				);
+-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.RnDiffApp-tvOS";
++				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.REACT.RnDiffApp-tvOS";
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+ 				SDKROOT = appletvos;
+ 				TARGETED_DEVICE_FAMILY = 3;
+@@ -606,7 +595,7 @@
+ 					"-ObjC",
+ 					"-lc++",
+ 				);
+-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.RnDiffApp-tvOSTests";
++				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.REACT.RnDiffApp-tvOSTests";
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+ 				SDKROOT = appletvos;
+ 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RnDiffApp-tvOS.app/RnDiffApp-tvOS";
+@@ -632,7 +621,7 @@
+ 					"-ObjC",
+ 					"-lc++",
+ 				);
+-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.RnDiffApp-tvOSTests";
++				PRODUCT_BUNDLE_IDENTIFIER = "com.facebook.REACT.RnDiffApp-tvOSTests";
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+ 				SDKROOT = appletvos;
+ 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RnDiffApp-tvOS.app/RnDiffApp-tvOS";
+@@ -644,7 +633,6 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ALWAYS_SEARCH_USER_PATHS = NO;
+-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+ 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+ 				CLANG_CXX_LIBRARY = "libc++";
+ 				CLANG_ENABLE_MODULES = YES;
+@@ -688,12 +676,6 @@
+ 				GCC_WARN_UNUSED_FUNCTION = YES;
+ 				GCC_WARN_UNUSED_VARIABLE = YES;
+ 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+-				LD_RUNPATH_SEARCH_PATHS = "/usr/lib/swift $(inherited)";
+-				LIBRARY_SEARCH_PATHS = (
+-					"\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"",
+-					"\"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)\"",
+-					"\"$(inherited)\"",
+-				);
+ 				MTL_ENABLE_DEBUG_INFO = YES;
+ 				ONLY_ACTIVE_ARCH = YES;
+ 				SDKROOT = iphoneos;
+@@ -704,7 +686,6 @@
+ 			isa = XCBuildConfiguration;
+ 			buildSettings = {
+ 				ALWAYS_SEARCH_USER_PATHS = NO;
+-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+ 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+ 				CLANG_CXX_LIBRARY = "libc++";
+ 				CLANG_ENABLE_MODULES = YES;
+@@ -741,12 +722,6 @@
+ 				GCC_WARN_UNUSED_FUNCTION = YES;
+ 				GCC_WARN_UNUSED_VARIABLE = YES;
+ 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
+-				LD_RUNPATH_SEARCH_PATHS = "/usr/lib/swift $(inherited)";
+-				LIBRARY_SEARCH_PATHS = (
+-					"\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"",
+-					"\"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)\"",
+-					"\"$(inherited)\"",
+-				);
+ 				MTL_ENABLE_DEBUG_INFO = NO;
+ 				SDKROOT = iphoneos;
+ 				VALIDATE_PRODUCT = YES;
+diff --git a/RnDiffApp/ios/RnDiffApp.xcodeproj/xcshareddata/xcschemes/RnDiffApp-tvOS.xcscheme b/RnDiffApp/ios/RnDiffApp.xcodeproj/xcshareddata/xcschemes/RnDiffApp-tvOS.xcscheme
+deleted file mode 100644
+index 39ea48e..0000000
+--- a/RnDiffApp/ios/RnDiffApp.xcodeproj/xcshareddata/xcschemes/RnDiffApp-tvOS.xcscheme
++++ /dev/null
+@@ -1,88 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<Scheme
+-   LastUpgradeVersion = "1130"
+-   version = "1.3">
+-   <BuildAction
+-      parallelizeBuildables = "YES"
+-      buildImplicitDependencies = "YES">
+-      <BuildActionEntries>
+-         <BuildActionEntry
+-            buildForTesting = "YES"
+-            buildForRunning = "YES"
+-            buildForProfiling = "YES"
+-            buildForArchiving = "YES"
+-            buildForAnalyzing = "YES">
+-            <BuildableReference
+-               BuildableIdentifier = "primary"
+-               BlueprintIdentifier = "2D02E47A1E0B4A5D006451C7"
+-               BuildableName = "RnDiffApp-tvOS.app"
+-               BlueprintName = "RnDiffApp-tvOS"
+-               ReferencedContainer = "container:RnDiffApp.xcodeproj">
+-            </BuildableReference>
+-         </BuildActionEntry>
+-      </BuildActionEntries>
+-   </BuildAction>
+-   <TestAction
+-      buildConfiguration = "Debug"
+-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+-      shouldUseLaunchSchemeArgsEnv = "YES">
+-      <Testables>
+-         <TestableReference
+-            skipped = "NO">
+-            <BuildableReference
+-               BuildableIdentifier = "primary"
+-               BlueprintIdentifier = "2D02E48F1E0B4A5D006451C7"
+-               BuildableName = "RnDiffApp-tvOSTests.xctest"
+-               BlueprintName = "RnDiffApp-tvOSTests"
+-               ReferencedContainer = "container:RnDiffApp.xcodeproj">
+-            </BuildableReference>
+-         </TestableReference>
+-      </Testables>
+-   </TestAction>
+-   <LaunchAction
+-      buildConfiguration = "Debug"
+-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+-      launchStyle = "0"
+-      useCustomWorkingDirectory = "NO"
+-      ignoresPersistentStateOnLaunch = "NO"
+-      debugDocumentVersioning = "YES"
+-      debugServiceExtension = "internal"
+-      allowLocationSimulation = "YES">
+-      <BuildableProductRunnable
+-         runnableDebuggingMode = "0">
+-         <BuildableReference
+-            BuildableIdentifier = "primary"
+-            BlueprintIdentifier = "2D02E47A1E0B4A5D006451C7"
+-            BuildableName = "RnDiffApp-tvOS.app"
+-            BlueprintName = "RnDiffApp-tvOS"
+-            ReferencedContainer = "container:RnDiffApp.xcodeproj">
+-         </BuildableReference>
+-      </BuildableProductRunnable>
+-   </LaunchAction>
+-   <ProfileAction
+-      buildConfiguration = "Release"
+-      shouldUseLaunchSchemeArgsEnv = "YES"
+-      savedToolIdentifier = ""
+-      useCustomWorkingDirectory = "NO"
+-      debugDocumentVersioning = "YES">
+-      <BuildableProductRunnable
+-         runnableDebuggingMode = "0">
+-         <BuildableReference
+-            BuildableIdentifier = "primary"
+-            BlueprintIdentifier = "2D02E47A1E0B4A5D006451C7"
+-            BuildableName = "RnDiffApp-tvOS.app"
+-            BlueprintName = "RnDiffApp-tvOS"
+-            ReferencedContainer = "container:RnDiffApp.xcodeproj">
+-         </BuildableReference>
+-      </BuildableProductRunnable>
+-   </ProfileAction>
+-   <AnalyzeAction
+-      buildConfiguration = "Debug">
+-   </AnalyzeAction>
+-   <ArchiveAction
+-      buildConfiguration = "Release"
+-      revealArchiveInOrganizer = "YES">
+-   </ArchiveAction>
+-</Scheme>
+diff --git a/RnDiffApp/ios/RnDiffApp.xcodeproj/xcshareddata/xcschemes/RnDiffApp.xcscheme b/RnDiffApp/ios/RnDiffApp.xcodeproj/xcshareddata/xcschemes/RnDiffApp.xcscheme
+deleted file mode 100644
+index d7445ab..0000000
+--- a/RnDiffApp/ios/RnDiffApp.xcodeproj/xcshareddata/xcschemes/RnDiffApp.xcscheme
++++ /dev/null
+@@ -1,88 +0,0 @@
+-<?xml version="1.0" encoding="UTF-8"?>
+-<Scheme
+-   LastUpgradeVersion = "1130"
+-   version = "1.3">
+-   <BuildAction
+-      parallelizeBuildables = "YES"
+-      buildImplicitDependencies = "YES">
+-      <BuildActionEntries>
+-         <BuildActionEntry
+-            buildForTesting = "YES"
+-            buildForRunning = "YES"
+-            buildForProfiling = "YES"
+-            buildForArchiving = "YES"
+-            buildForAnalyzing = "YES">
+-            <BuildableReference
+-               BuildableIdentifier = "primary"
+-               BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
+-               BuildableName = "RnDiffApp.app"
+-               BlueprintName = "RnDiffApp"
+-               ReferencedContainer = "container:RnDiffApp.xcodeproj">
+-            </BuildableReference>
+-         </BuildActionEntry>
+-      </BuildActionEntries>
+-   </BuildAction>
+-   <TestAction
+-      buildConfiguration = "Debug"
+-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+-      shouldUseLaunchSchemeArgsEnv = "YES">
+-      <Testables>
+-         <TestableReference
+-            skipped = "NO">
+-            <BuildableReference
+-               BuildableIdentifier = "primary"
+-               BlueprintIdentifier = "00E356ED1AD99517003FC87E"
+-               BuildableName = "RnDiffAppTests.xctest"
+-               BlueprintName = "RnDiffAppTests"
+-               ReferencedContainer = "container:RnDiffApp.xcodeproj">
+-            </BuildableReference>
+-         </TestableReference>
+-      </Testables>
+-   </TestAction>
+-   <LaunchAction
+-      buildConfiguration = "Debug"
+-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+-      launchStyle = "0"
+-      useCustomWorkingDirectory = "NO"
+-      ignoresPersistentStateOnLaunch = "NO"
+-      debugDocumentVersioning = "YES"
+-      debugServiceExtension = "internal"
+-      allowLocationSimulation = "YES">
+-      <BuildableProductRunnable
+-         runnableDebuggingMode = "0">
+-         <BuildableReference
+-            BuildableIdentifier = "primary"
+-            BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
+-            BuildableName = "RnDiffApp.app"
+-            BlueprintName = "RnDiffApp"
+-            ReferencedContainer = "container:RnDiffApp.xcodeproj">
+-         </BuildableReference>
+-      </BuildableProductRunnable>
+-   </LaunchAction>
+-   <ProfileAction
+-      buildConfiguration = "Release"
+-      shouldUseLaunchSchemeArgsEnv = "YES"
+-      savedToolIdentifier = ""
+-      useCustomWorkingDirectory = "NO"
+-      debugDocumentVersioning = "YES">
+-      <BuildableProductRunnable
+-         runnableDebuggingMode = "0">
+-         <BuildableReference
+-            BuildableIdentifier = "primary"
+-            BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
+-            BuildableName = "RnDiffApp.app"
+-            BlueprintName = "RnDiffApp"
+-            ReferencedContainer = "container:RnDiffApp.xcodeproj">
+-         </BuildableReference>
+-      </BuildableProductRunnable>
+-   </ProfileAction>
+-   <AnalyzeAction
+-      buildConfiguration = "Debug">
+-   </AnalyzeAction>
+-   <ArchiveAction
+-      buildConfiguration = "Release"
+-      revealArchiveInOrganizer = "YES">
+-   </ArchiveAction>
+-</Scheme>
+diff --git a/RnDiffApp/ios/RnDiffApp/AppDelegate.h b/RnDiffApp/ios/RnDiffApp/AppDelegate.h
+index ef1de86..2726d5e 100644
+--- a/RnDiffApp/ios/RnDiffApp/AppDelegate.h
++++ b/RnDiffApp/ios/RnDiffApp/AppDelegate.h
+@@ -1,3 +1,10 @@
++/**
++ * Copyright (c) Facebook, Inc. and its affiliates.
++ *
++ * This source code is licensed under the MIT license found in the
++ * LICENSE file in the root directory of this source tree.
++ */
++
+ #import <React/RCTBridgeDelegate.h>
+ #import <UIKit/UIKit.h>
+ 
+diff --git a/RnDiffApp/ios/RnDiffApp/AppDelegate.m b/RnDiffApp/ios/RnDiffApp/AppDelegate.m
+index c7db8b5..4c12ae4 100644
+--- a/RnDiffApp/ios/RnDiffApp/AppDelegate.m
++++ b/RnDiffApp/ios/RnDiffApp/AppDelegate.m
+@@ -1,36 +1,20 @@
++/**
++ * Copyright (c) Facebook, Inc. and its affiliates.
++ *
++ * This source code is licensed under the MIT license found in the
++ * LICENSE file in the root directory of this source tree.
++ */
++
+ #import "AppDelegate.h"
+ 
+ #import <React/RCTBridge.h>
+ #import <React/RCTBundleURLProvider.h>
+ #import <React/RCTRootView.h>
+ 
+-#if DEBUG
+-#import <FlipperKit/FlipperClient.h>
+-#import <FlipperKitLayoutPlugin/FlipperKitLayoutPlugin.h>
+-#import <FlipperKitUserDefaultsPlugin/FKUserDefaultsPlugin.h>
+-#import <FlipperKitNetworkPlugin/FlipperKitNetworkPlugin.h>
+-#import <SKIOSNetworkPlugin/SKIOSNetworkAdapter.h>
+-#import <FlipperKitReactPlugin/FlipperKitReactPlugin.h>
+-
+-static void InitializeFlipper(UIApplication *application) {
+-  FlipperClient *client = [FlipperClient sharedClient];
+-  SKDescriptorMapper *layoutDescriptorMapper = [[SKDescriptorMapper alloc] initWithDefaults];
+-  [client addPlugin:[[FlipperKitLayoutPlugin alloc] initWithRootNode:application withDescriptorMapper:layoutDescriptorMapper]];
+-  [client addPlugin:[[FKUserDefaultsPlugin alloc] initWithSuiteName:nil]];
+-  [client addPlugin:[FlipperKitReactPlugin new]];
+-  [client addPlugin:[[FlipperKitNetworkPlugin alloc] initWithNetworkAdapter:[SKIOSNetworkAdapter new]]];
+-  [client start];
+-}
+-#endif
+-
+ @implementation AppDelegate
+ 
+ - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+ {
+-#if DEBUG
+-  InitializeFlipper(application);
+-#endif
+-
+   RCTBridge *bridge = [[RCTBridge alloc] initWithDelegate:self launchOptions:launchOptions];
+   RCTRootView *rootView = [[RCTRootView alloc] initWithBridge:bridge
+                                                    moduleName:@"RnDiffApp"
+diff --git a/RnDiffApp/ios/RnDiffApp/main.m b/RnDiffApp/ios/RnDiffApp/main.m
+index b1df44b..c316cf8 100644
+--- a/RnDiffApp/ios/RnDiffApp/main.m
++++ b/RnDiffApp/ios/RnDiffApp/main.m
+@@ -1,3 +1,10 @@
++/**
++ * Copyright (c) Facebook, Inc. and its affiliates.
++ *
++ * This source code is licensed under the MIT license found in the
++ * LICENSE file in the root directory of this source tree.
++ */
++
+ #import <UIKit/UIKit.h>
+ 
+ #import "AppDelegate.h"
+diff --git a/RnDiffApp/ios/RnDiffAppTests/RnDiffAppTests.m b/RnDiffApp/ios/RnDiffAppTests/RnDiffAppTests.m
+index fe83ad2..c5d35d0 100644
+--- a/RnDiffApp/ios/RnDiffAppTests/RnDiffAppTests.m
++++ b/RnDiffApp/ios/RnDiffAppTests/RnDiffAppTests.m
+@@ -1,3 +1,10 @@
++/**
++ * Copyright (c) Facebook, Inc. and its affiliates.
++ *
++ * This source code is licensed under the MIT license found in the
++ * LICENSE file in the root directory of this source tree.
++ */
++
+ #import <UIKit/UIKit.h>
+ #import <XCTest/XCTest.h>
+ 
+@@ -52,7 +59,7 @@
+       return NO;
+     }];
+   }
+-
++  
+ #ifdef DEBUG
+   RCTSetLogFunction(RCTDefaultLogFunction);
+ #endif
+diff --git a/RnDiffApp/metro.config.js b/RnDiffApp/metro.config.js
+index 9a16730..2ed937d 100644
+--- a/RnDiffApp/metro.config.js
++++ b/RnDiffApp/metro.config.js
+@@ -4,21 +4,36 @@
+  *
+  * @format
+  */
++const fs = require('fs');
+ const path = require('path');
+ const blacklist = require('metro-config/src/defaults/blacklist');
+ 
++const rnPath = fs.realpathSync(
++  path.resolve(require.resolve('react-native/package.json'), '..'),
++);
++const rnwPath = fs.realpathSync(
++  path.resolve(require.resolve('react-native-windows/package.json'), '..'),
++);
++
+ module.exports = {
+   resolver: {
++    extraNodeModules: {
++      // Redirect react-native to react-native-windows
++      'react-native': rnwPath,
++      'react-native-windows': rnwPath,
++    },
++    // Include the macos platform in addition to the defaults because the fork includes macos, but doesn't declare it
++    platforms: ['ios', 'android', 'windesktop', 'windows', 'web', 'macos'],
++    // Since there are multiple copies of react-native, we need to ensure that metro only sees one of them
++    // This should go in RN 0.61 when haste is removed
+     blacklistRE: blacklist([
+-      // This stops "react-native run-windows" from causing the metro server to crash if its already running
+       new RegExp(
+-        `${path.resolve(__dirname, 'windows').replace(/[/\\]/g, '/')}.*`,
++        `${(path.resolve(rnPath) + path.sep).replace(/[/\\]/g, '/')}.*`,
+       ),
+-      // This prevents "react-native run-windows" from hitting: EBUSY: resource busy or locked, open msbuild.ProjectImports.zip
++
++      // This stops "react-native run-windows" from causing the metro server to crash if its already running
+       new RegExp(
+-        `${path
+-          .resolve(__dirname, 'msbuild.ProjectImports.zip')
+-          .replace(/[/\\]/g, '/')}.*`,
++        `${path.resolve(__dirname, 'windows').replace(/[/\\]/g, '/')}.*`,
+       ),
+     ]),
+   },
+diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
+index d75844d..60893e9 100644
+--- a/RnDiffApp/package.json
++++ b/RnDiffApp/package.json
+@@ -1,29 +1,26 @@
+ {
+-  "name": "rndiffapp",
++  "name": "RnDiffApp",
+   "version": "0.0.1",
+   "private": true,
+   "scripts": {
+     "android": "react-native run-android",
+     "ios": "react-native run-ios",
+     "start": "react-native start",
+-    "test": "jest",
+-    "lint": "eslint .",
+-    "windows": "react-native run-windows"
++    "test": "jest"
+   },
+   "dependencies": {
+-    "react": "16.11.0",
+-    "react-native": "^0.62.0-0",
+-    "react-native-windows": "0.62.0-preview.15"
++    "react": "16.8.1",
++    "react-native": "0.61.5",
++    "react-native-windows": "0.61.3"
+   },
+   "devDependencies": {
+-    "@babel/core": "^7.6.2",
+-    "@babel/runtime": "^7.6.2",
+-    "@react-native-community/eslint-config": "^0.0.5",
+-    "babel-jest": "^24.9.0",
+-    "eslint": "^6.5.1",
+-    "jest": "^24.9.0",
+-    "metro-react-native-babel-preset": "^0.58.0",
+-    "react-test-renderer": "16.11.0"
++    "@babel/core": "^7.5.0",
++    "@babel/runtime": "^7.5.0",
++    "@react-native-community/eslint-config": "^0.0.3",
++    "babel-jest": "^24.1.0",
++    "jest": "^24.1.0",
++    "metro-react-native-babel-preset": "^0.51.1",
++    "react-test-renderer": "16.8.1"
+   },
+   "jest": {
+     "preset": "react-native"
+diff --git a/RnDiffApp/react-native.config.js b/RnDiffApp/react-native.config.js
+new file mode 100644
+index 0000000..cedd9d3
+--- /dev/null
++++ b/RnDiffApp/react-native.config.js
+@@ -0,0 +1,5 @@
++const fs = require('fs');
++const path = require('path');
++module.exports = {
++  reactNativePath:  fs.realpathSync(path.resolve(require.resolve('react-native-windows/package.json'), '..')),
++};
+diff --git a/RnDiffApp/windows/rndiffapp.sln b/RnDiffApp/windows/RnDiffApp.sln
+similarity index 97%
+rename from RnDiffApp/windows/rndiffapp.sln
+rename to RnDiffApp/windows/RnDiffApp.sln
+index 25b1663..93c9017 100644
+--- a/RnDiffApp/windows/rndiffapp.sln
++++ b/RnDiffApp/windows/RnDiffApp.sln
+@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
+ # Visual Studio Version 16
+ VisualStudioVersion = 16.0.29215.179
+ MinimumVisualStudioVersion = 10.0.40219.1
+-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rndiffapp", "rndiffapp\rndiffapp.vcxproj", "{UNIQUE00-APP0-GUID-GOES-HERE00000000}"
++Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RnDiffApp", "RnDiffApp\RnDiffApp.vcxproj", "{UNIQUE00-APP0-GUID-GOES-HERE00000000}"
+ 	ProjectSection(ProjectDependencies) = postProject
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136} = {F7D32BD0-2749-483E-9A0D-1635EF7E3136}
+ 	EndProjectSection
+@@ -45,14 +45,13 @@ Global
+ 		..\node_modules\react-native-windows\JSI\Shared\JSI.Shared.vcxitems*{0cc28589-39e4-4288-b162-97b959f8b843}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Shared\Shared.vcxitems*{2049dbe9-8d13-42c9-ae4b-413ae38fffd0}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Microsoft.ReactNative.SharedManaged\Microsoft.ReactNative.SharedManaged.projitems*{67a1076f-7790-4203-86ea-4402ccb5e782}*SharedItemsImports = 13
+-		..\node_modules\react-native-windows\Microsoft.ReactNative.Cxx\Microsoft.ReactNative.Cxx.vcxitems*{d8a2ba44-0203-41f7-8a1c-b27684ad5936}*SharedItemsImports = 4
++		..\node_modules\react-native-windows\Microsoft.ReactNative.Cxx\Microsoft.ReactNative.Cxx.vcxitems*{898e2be3-9251-4528-8b4a-1a2f41942407}*SharedItemsImports = 4
+ 		..\node_modules\react-native-windows\JSI\Shared\JSI.Shared.vcxitems*{a62d504a-16b8-41d2-9f19-e2e86019e5e4}*SharedItemsImports = 4
+ 		..\node_modules\react-native-windows\Chakra\Chakra.vcxitems*{c38970c0-5fbf-4d69-90d8-cbac225ae895}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Mso\Mso.vcxitems*{84e05bfa-cbaf-4f0d-bfb6-4ce85742a57e}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Microsoft.ReactNative.Cxx\Microsoft.ReactNative.Cxx.vcxitems*{da8b35b3-da00-4b02-bde6-6a397b3fd46b}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Chakra\Chakra.vcxitems*{f7d32bd0-2749-483e-9a0d-1635ef7e3136}*SharedItemsImports = 4
+ 		..\node_modules\react-native-windows\JSI\Shared\JSI.Shared.vcxitems*{f7d32bd0-2749-483e-9a0d-1635ef7e3136}*SharedItemsImports = 4
+-		..\node_modules\react-native-windows\Microsoft.ReactNative.Cxx\Microsoft.ReactNative.Cxx.vcxitems*{f7d32bd0-2749-483e-9a0d-1635ef7e3136}*SharedItemsImports = 4
+ 		..\node_modules\react-native-windows\Shared\Shared.vcxitems*{f7d32bd0-2749-483e-9a0d-1635ef7e3136}*SharedItemsImports = 4
+ 		..\node_modules\react-native-windows\Mso\Mso.vcxitems*{f7d32bd0-2749-483e-9a0d-1635ef7e3136}*SharedItemsImports = 4
+ 	EndGlobalSection
+diff --git a/RnDiffApp/windows/rndiffapp/App.cpp b/RnDiffApp/windows/RnDiffApp/App.cpp
+similarity index 70%
+rename from RnDiffApp/windows/rndiffapp/App.cpp
+rename to RnDiffApp/windows/RnDiffApp/App.cpp
+index e824609..b87f347 100644
+--- a/RnDiffApp/windows/rndiffapp/App.cpp
++++ b/RnDiffApp/windows/RnDiffApp/App.cpp
+@@ -1,13 +1,12 @@
+ #include "pch.h"
+ 
+ #include "App.h"
+-
+-#include "AutolinkedNativeModules.g.h"
+ #include "ReactPackageProvider.h"
+ 
+ 
+-using namespace winrt::rndiffapp;
+-using namespace winrt::rndiffapp::implementation;
++
++using namespace winrt::RnDiffApp;
++using namespace winrt::RnDiffApp::implementation;
+ 
+ /// <summary>
+ /// Initializes the singleton application object.  This is the first line of
+@@ -16,7 +15,7 @@ using namespace winrt::rndiffapp::implementation;
+ /// </summary>
+ App::App() noexcept
+ {
+-    MainComponentName(L"rndiffapp");
++    MainComponentName(L"RnDiffApp");
+ 
+ #if BUNDLE
+     JavaScriptBundleFile(L"index.windows");
+@@ -34,9 +33,16 @@ App::App() noexcept
+     InstanceSettings().EnableDeveloperMenu(false);
+ #endif
+ 
+-    RegisterAutolinkedNativeModulePackages(PackageProviders()); // Includes any autolinked modules
+-
+     PackageProviders().Append(make<ReactPackageProvider>()); // Includes all modules in this project
+ 
++    REACT_REGISTER_NATIVE_MODULE_PACKAGES(); //code-gen macro from autolink
++
+     InitializeComponent();
++
++    // This works around a cpp/winrt bug with composable/aggregable types tracked
++    // by 22116519
++    AddRef();
++    m_inner.as<::IUnknown>()->Release();
+ }
++
++
+diff --git a/RnDiffApp/windows/rndiffapp/App.h b/RnDiffApp/windows/RnDiffApp/App.h
+similarity index 53%
+rename from RnDiffApp/windows/rndiffapp/App.h
+rename to RnDiffApp/windows/RnDiffApp/App.h
+index ebe917d..fbeb0cd 100644
+--- a/RnDiffApp/windows/rndiffapp/App.h
++++ b/RnDiffApp/windows/RnDiffApp/App.h
+@@ -2,12 +2,14 @@
+ 
+ #include "App.xaml.g.h"
+ 
+-namespace winrt::rndiffapp::implementation
++
++
++namespace winrt::RnDiffApp::implementation
+ {
+     struct App : AppT<App>
+     {
+         App() noexcept;
+     };
+-} // namespace winrt::rndiffapp::implementation
++} // namespace winrt::RnDiffApp::implementation
+ 
+ 
+diff --git a/RnDiffApp/windows/RnDiffApp/App.idl b/RnDiffApp/windows/RnDiffApp/App.idl
+new file mode 100644
+index 0000000..f80e093
+--- /dev/null
++++ b/RnDiffApp/windows/RnDiffApp/App.idl
+@@ -0,0 +1,3 @@
++namespace RnDiffApp
++{
++}
+diff --git a/RnDiffApp/windows/rndiffapp/App.xaml b/RnDiffApp/windows/RnDiffApp/App.xaml
+similarity index 85%
+rename from RnDiffApp/windows/rndiffapp/App.xaml
+rename to RnDiffApp/windows/RnDiffApp/App.xaml
+index 0f62372..f4db5c0 100644
+--- a/RnDiffApp/windows/rndiffapp/App.xaml
++++ b/RnDiffApp/windows/RnDiffApp/App.xaml
+@@ -1,8 +1,8 @@
+ ﻿<react:ReactApplication
+-    x:Class="rndiffapp.App"
++    x:Class="RnDiffApp.App"
+     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+-    xmlns:local="using:rndiffapp"
++    xmlns:local="using:RnDiffApp"
+     xmlns:react="using:Microsoft.ReactNative">
+     <Application.Resources>
+         <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+diff --git a/RnDiffApp/windows/rndiffapp/Assets/LockScreenLogo.scale-200.png b/RnDiffApp/windows/RnDiffApp/Assets/LockScreenLogo.scale-200.png
+similarity index 100%
+rename from RnDiffApp/windows/rndiffapp/Assets/LockScreenLogo.scale-200.png
+rename to RnDiffApp/windows/RnDiffApp/Assets/LockScreenLogo.scale-200.png
+diff --git a/RnDiffApp/windows/rndiffapp/Assets/SplashScreen.scale-200.png b/RnDiffApp/windows/RnDiffApp/Assets/SplashScreen.scale-200.png
+similarity index 100%
+rename from RnDiffApp/windows/rndiffapp/Assets/SplashScreen.scale-200.png
+rename to RnDiffApp/windows/RnDiffApp/Assets/SplashScreen.scale-200.png
+diff --git a/RnDiffApp/windows/rndiffapp/Assets/Square150x150Logo.scale-200.png b/RnDiffApp/windows/RnDiffApp/Assets/Square150x150Logo.scale-200.png
+similarity index 100%
+rename from RnDiffApp/windows/rndiffapp/Assets/Square150x150Logo.scale-200.png
+rename to RnDiffApp/windows/RnDiffApp/Assets/Square150x150Logo.scale-200.png
+diff --git a/RnDiffApp/windows/rndiffapp/Assets/Square44x44Logo.scale-200.png b/RnDiffApp/windows/RnDiffApp/Assets/Square44x44Logo.scale-200.png
+similarity index 100%
+rename from RnDiffApp/windows/rndiffapp/Assets/Square44x44Logo.scale-200.png
+rename to RnDiffApp/windows/RnDiffApp/Assets/Square44x44Logo.scale-200.png
+diff --git a/RnDiffApp/windows/rndiffapp/Assets/Square44x44Logo.targetsize-24_altform-unplated.png b/RnDiffApp/windows/RnDiffApp/Assets/Square44x44Logo.targetsize-24_altform-unplated.png
+similarity index 100%
+rename from RnDiffApp/windows/rndiffapp/Assets/Square44x44Logo.targetsize-24_altform-unplated.png
+rename to RnDiffApp/windows/RnDiffApp/Assets/Square44x44Logo.targetsize-24_altform-unplated.png
+diff --git a/RnDiffApp/windows/rndiffapp/Assets/StoreLogo.png b/RnDiffApp/windows/RnDiffApp/Assets/StoreLogo.png
+similarity index 100%
+rename from RnDiffApp/windows/rndiffapp/Assets/StoreLogo.png
+rename to RnDiffApp/windows/RnDiffApp/Assets/StoreLogo.png
+diff --git a/RnDiffApp/windows/rndiffapp/Assets/Wide310x150Logo.scale-200.png b/RnDiffApp/windows/RnDiffApp/Assets/Wide310x150Logo.scale-200.png
+similarity index 100%
+rename from RnDiffApp/windows/rndiffapp/Assets/Wide310x150Logo.scale-200.png
+rename to RnDiffApp/windows/RnDiffApp/Assets/Wide310x150Logo.scale-200.png
+diff --git a/RnDiffApp/windows/RnDiffApp/Bundle/.gitignore b/RnDiffApp/windows/RnDiffApp/Bundle/.gitignore
+new file mode 100644
+index 0000000..d6b7ef3
+--- /dev/null
++++ b/RnDiffApp/windows/RnDiffApp/Bundle/.gitignore
+@@ -0,0 +1,2 @@
++*
++!.gitignore
+diff --git a/RnDiffApp/windows/rndiffapp/Package.appxmanifest b/RnDiffApp/windows/RnDiffApp/Package.appxmanifest
+similarity index 90%
+rename from RnDiffApp/windows/rndiffapp/Package.appxmanifest
+rename to RnDiffApp/windows/RnDiffApp/Package.appxmanifest
+index dc1ae1e..3328bee 100644
+--- a/RnDiffApp/windows/rndiffapp/Package.appxmanifest
++++ b/RnDiffApp/windows/RnDiffApp/Package.appxmanifest
+@@ -12,7 +12,7 @@
+   <mp:PhoneIdentity PhoneProductId="{UNIQUE00-APPX-GUID-GOES-HERE00000000}" PhonePublisherId="AppSpecificPublisherGuidHere"/>
+ 
+   <Properties>
+-    <DisplayName>rndiffapp</DisplayName>
++    <DisplayName>RnDiffApp</DisplayName>
+     <PublisherDisplayName>AppSpecificPublisherNameHere</PublisherDisplayName>
+     <Logo>Assets\StoreLogo.png</Logo>
+   </Properties>
+@@ -28,12 +28,12 @@
+   <Applications>
+     <Application Id="App"
+       Executable="$targetnametoken$.exe"
+-      EntryPoint="rndiffapp.App">
++      EntryPoint="RnDiffApp.App">
+       <uap:VisualElements
+-        DisplayName="rndiffapp"
++        DisplayName="RnDiffApp"
+         Square150x150Logo="Assets\Square150x150Logo.png"
+         Square44x44Logo="Assets\Square44x44Logo.png"
+-        Description="rndiffapp"
++        Description="RnDiffApp"
+         BackgroundColor="transparent">
+         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
+         <uap:SplashScreen Image="Assets\SplashScreen.png" />
+diff --git a/RnDiffApp/windows/rndiffapp/PropertySheet.props b/RnDiffApp/windows/RnDiffApp/PropertySheet.props
+similarity index 100%
+rename from RnDiffApp/windows/rndiffapp/PropertySheet.props
+rename to RnDiffApp/windows/RnDiffApp/PropertySheet.props
+diff --git a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp b/RnDiffApp/windows/RnDiffApp/ReactPackageProvider.cpp
+similarity index 74%
+rename from RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp
+rename to RnDiffApp/windows/RnDiffApp/ReactPackageProvider.cpp
+index e0ab383..ad0a1da 100644
+--- a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp
++++ b/RnDiffApp/windows/RnDiffApp/ReactPackageProvider.cpp
+@@ -1,11 +1,13 @@
+ #include "pch.h"
+ #include "ReactPackageProvider.h"
++
+ #include "NativeModules.h"
+ 
+ 
++
+ using namespace winrt::Microsoft::ReactNative;
+ 
+-namespace winrt::rndiffapp::implementation
++namespace winrt::RnDiffApp::implementation
+ {
+ 
+ void ReactPackageProvider::CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept
+@@ -13,6 +15,6 @@ void ReactPackageProvider::CreatePackage(IReactPackageBuilder const &packageBuil
+     AddAttributedModules(packageBuilder);
+ }
+ 
+-} // namespace winrt::rndiffapp::implementation
++} // namespace winrt::RnDiffApp::implementation
+ 
+ 
+diff --git a/RnDiffApp/windows/RnDiffApp/ReactPackageProvider.h b/RnDiffApp/windows/RnDiffApp/ReactPackageProvider.h
+new file mode 100644
+index 0000000..4431cfb
+--- /dev/null
++++ b/RnDiffApp/windows/RnDiffApp/ReactPackageProvider.h
+@@ -0,0 +1,20 @@
++#pragma once
++
++#include "winrt/Microsoft.ReactNative.h"
++
++
++
++using namespace winrt::Microsoft::ReactNative;
++
++namespace winrt::RnDiffApp::implementation
++{
++
++    struct ReactPackageProvider : winrt::implements<ReactPackageProvider, IReactPackageProvider>
++    {
++    public: // IReactPackageProvider
++        void CreatePackage(IReactPackageBuilder const &packageBuilder) noexcept;
++    };
++
++} // namespace winrt::RnDiffApp::implementation
++
++
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj b/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj
+similarity index 73%
+rename from RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
+rename to RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj
+index b78f57f..46ee9a6 100644
+--- a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
++++ b/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj
+@@ -1,21 +1,21 @@
+ ﻿<?xml version="1.0" encoding="utf-8"?>
+-<Project ToolsVersion="16.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+-  <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.200316.3\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.200316.3\build\native\Microsoft.Windows.CppWinRT.props')" />
++<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++  <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.190730.2\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.190730.2\build\native\Microsoft.Windows.CppWinRT.props')" />
+   <PropertyGroup Label="Globals">
+     <CppWinRTOptimized>true</CppWinRTOptimized>
+     <CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
+     <MinimalCoreWin>true</MinimalCoreWin>
+     <ProjectGuid>{UNIQUE00-APP0-GUID-GOES-HERE00000000}</ProjectGuid>
+-    <ProjectName>rndiffapp</ProjectName>
+-    <RootNamespace>rndiffapp</RootNamespace>
++    <ProjectName>RnDiffApp</ProjectName>
++    <RootNamespace>RnDiffApp</RootNamespace>
+     <DefaultLanguage>en-US</DefaultLanguage>
+-    <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
++    <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
+     <AppContainerApplication>true</AppContainerApplication>
+     <ApplicationType>Windows Store</ApplicationType>
+     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+     <WindowsTargetPlatformVersion Condition=" '$(WindowsTargetPlatformVersion)' == '' ">10.0.18362.0</WindowsTargetPlatformVersion>
+-    <WindowsTargetPlatformMinVersion>10.0.16299.0</WindowsTargetPlatformMinVersion>
+-    <PackageCertificateKeyFile>rndiffapp_TemporaryKey.pfx</PackageCertificateKeyFile>
++    <WindowsTargetPlatformMinVersion>10.0.15063.0</WindowsTargetPlatformMinVersion>
++    <PackageCertificateKeyFile>RnDiffApp_TemporaryKey.pfx</PackageCertificateKeyFile>
+     <PackageCertificateThumbprint>UniqueThumbPrintHere</PackageCertificateThumbprint>
+     <PackageCertificatePassword>password</PackageCertificatePassword>
+   </PropertyGroup>
+@@ -56,6 +56,7 @@
+   </ItemGroup>
+   <PropertyGroup Label="Configuration">
+     <ConfigurationType>Application</ConfigurationType>
++    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
+     <CharacterSet>Unicode</CharacterSet>
+   </PropertyGroup>
+   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+@@ -70,6 +71,9 @@
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+   <ImportGroup Label="ExtensionSettings">
+   </ImportGroup>
++  <ImportGroup Label="Shared">
++    <Import Project="..\..\node_modules\react-native-windows\Microsoft.ReactNative.Cxx\Microsoft.ReactNative.Cxx.vcxitems" Label="Shared" />
++  </ImportGroup>
+   <ImportGroup Label="PropertySheets">
+     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+   </ImportGroup>
+@@ -99,7 +103,6 @@
+   </ItemDefinitionGroup>
+   <ItemGroup>
+     <ClInclude Include="ReactPackageProvider.h" />
+-    <ClInclude Include="AutolinkedNativeModules.g.h" />
+     <ClInclude Include="pch.h" />
+     <ClInclude Include="App.h">
+       <DependentUpon>App.xaml</DependentUpon>
+@@ -126,7 +129,6 @@
+   </ItemGroup>
+   <ItemGroup>
+     <ClCompile Include="ReactPackageProvider.cpp" />
+-    <ClCompile Include="AutolinkedNativeModules.g.cpp" />
+     <ClCompile Include="pch.cpp">
+       <PrecompiledHeader>Create</PrecompiledHeader>
+     </ClCompile>
+@@ -147,31 +149,31 @@
+       <DeploymentContent>false</DeploymentContent>
+     </Text>
+   </ItemGroup>
++  <ItemGroup>
++    <ProjectReference Include="..\..\node_modules\react-native-windows\Microsoft.ReactNative\Microsoft.ReactNative.vcxproj">
++      <Project>{f7d32bd0-2749-483e-9a0d-1635ef7e3136}</Project>
++    </ProjectReference>
++  </ItemGroup>
++
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+-  <PropertyGroup Label="ReactNativeWindowsNodeProps">
+-    <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'node_modules\react-native-windows\package.json'))\node_modules\react-native-windows\</ReactNativeWindowsDir>
++
++  <PropertyGroup>
++    <BundleCommand>
++      npx --no-install react-native bundle --platform windows --entry-file index.js --bundle-output $(MSBuildThisFileDirectory)/Bundle/index.windows.bundle --assets-dest $(MSBuildThisFileDirectory)/Bundle
++    </BundleCommand>
+   </PropertyGroup>
+-  <ImportGroup Label="ReactNativeWindowsNodeTargets">
+-    <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.props" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.props')" />
+-    <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.targets" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.targets')" />
+-  </ImportGroup>
+-  <Target Name="EnsureReactNativeWindowsNodeTargets" BeforeTargets="PrepareForBuild">
+-    <PropertyGroup>
+-      <ErrorText>This project references targets in your node_modules\react-native-windows folder. The missing file is {0}.</ErrorText>
+-    </PropertyGroup>
+-    <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.props')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.props'))" />
+-    <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.targets'))" />
+-  </Target>
++  <Import Project="..\..\node_modules\react-native-windows\PropertySheets\Bundle.Cpp.targets"/>
++
+   <ImportGroup Label="ExtensionTargets">
+-    <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.200316.3\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.200316.3\build\native\Microsoft.Windows.CppWinRT.targets')" />
++    <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.190730.2\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.190730.2\build\native\Microsoft.Windows.CppWinRT.targets')" />
+     <Import Project="..\packages\Microsoft.UI.Xaml.2.3.191129002\build\native\Microsoft.UI.Xaml.targets" Condition="Exists('..\packages\Microsoft.UI.Xaml.2.3.191129002\build\native\Microsoft.UI.Xaml.targets')" />
+   </ImportGroup>
+   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+     <PropertyGroup>
+       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+     </PropertyGroup>
+-    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.200316.3\build\native\Microsoft.Windows.CppWinRT.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.200316.3\build\native\Microsoft.Windows.CppWinRT.props'))" />
+-    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.200316.3\build\native\Microsoft.Windows.CppWinRT.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.200316.3\build\native\Microsoft.Windows.CppWinRT.targets'))" />
++    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.190730.2\build\native\Microsoft.Windows.CppWinRT.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.190730.2\build\native\Microsoft.Windows.CppWinRT.props'))" />
++    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.190730.2\build\native\Microsoft.Windows.CppWinRT.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.190730.2\build\native\Microsoft.Windows.CppWinRT.targets'))" />
+     <Error Condition="!Exists('..\packages\Microsoft.UI.Xaml.2.3.191129002\build\native\Microsoft.UI.Xaml.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.UI.Xaml.2.3.191129002\build\native\Microsoft.UI.Xaml.targets'))" />
+   </Target>
+ </Project>
+\ No newline at end of file
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters b/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj.filters
+similarity index 93%
+rename from RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters
+rename to RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj.filters
+index 86bc8d7..13a1efb 100644
+--- a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters
++++ b/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj.filters
+@@ -11,13 +11,11 @@
+     <ClCompile Include="App.cpp" />
+     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
+     <ClCompile Include="ReactPackageProvider.cpp" />
+-    <ClCompile Include="AutolinkedNativeModules.g.cpp" />
+   </ItemGroup>
+   <ItemGroup>
+     <ClInclude Include="pch.h" />
+     <ClInclude Include="App.h" />
+     <ClInclude Include="ReactPackageProvider.h" />
+-    <ClInclude Include="AutolinkedNativeModules.g.h" />
+   </ItemGroup>
+   <ItemGroup>
+     <Image Include="Assets\Wide310x150Logo.scale-200.png">
+diff --git a/RnDiffApp/windows/RnDiffApp/RnDiffApp_TemporaryKey.pfx b/RnDiffApp/windows/RnDiffApp/RnDiffApp_TemporaryKey.pfx
+new file mode 100644
+index 0000000000000000000000000000000000000000..417d000741b79e4d90554002ff457d4ce4a64af5
+GIT binary patch
+literal 2614
+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
+Strc%<n7*X7PayvK$o~Py(xI{d
+
+literal 0
+HcmV?d00001
+
+diff --git a/RnDiffApp/windows/RnDiffApp/nativeModules.g.h b/RnDiffApp/windows/RnDiffApp/nativeModules.g.h
+new file mode 100644
+index 0000000..049a8c9
+--- /dev/null
++++ b/RnDiffApp/windows/RnDiffApp/nativeModules.g.h
+@@ -0,0 +1,2 @@
++// NativeModules.g.h -- contents generated by "react-native run-windows"
++#define REACT_REGISTER_NATIVE_MODULE_PACKAGES()
+\ No newline at end of file
+diff --git a/RnDiffApp/windows/rndiffapp/packages.config b/RnDiffApp/windows/RnDiffApp/packages.config
+similarity index 69%
+rename from RnDiffApp/windows/rndiffapp/packages.config
+rename to RnDiffApp/windows/RnDiffApp/packages.config
+index 944c029..28f472d 100644
+--- a/RnDiffApp/windows/rndiffapp/packages.config
++++ b/RnDiffApp/windows/RnDiffApp/packages.config
+@@ -1,5 +1,5 @@
+ ﻿<?xml version="1.0" encoding="utf-8"?>
+ <packages>
+-  <package id="Microsoft.Windows.CppWinRT" version="2.0.200316.3" targetFramework="native" />
++  <package id="Microsoft.Windows.CppWinRT" version="2.0.190730.2" targetFramework="native" />
+   <package id="Microsoft.UI.Xaml" version="2.3.191129002" targetFramework="native" />
+ </packages>
+\ No newline at end of file
+diff --git a/RnDiffApp/windows/rndiffapp/pch.cpp b/RnDiffApp/windows/RnDiffApp/pch.cpp
+similarity index 100%
+rename from RnDiffApp/windows/rndiffapp/pch.cpp
+rename to RnDiffApp/windows/RnDiffApp/pch.cpp
+diff --git a/RnDiffApp/windows/rndiffapp/pch.h b/RnDiffApp/windows/RnDiffApp/pch.h
+similarity index 96%
+rename from RnDiffApp/windows/rndiffapp/pch.h
+rename to RnDiffApp/windows/RnDiffApp/pch.h
+index 13f3eec..379e0b4 100644
+--- a/RnDiffApp/windows/rndiffapp/pch.h
++++ b/RnDiffApp/windows/RnDiffApp/pch.h
+@@ -24,3 +24,5 @@
+ #include <winrt/Microsoft.UI.Xaml.Controls.h>
+ #include <winrt/Microsoft.UI.Xaml.Media.h>
+ #include <winrt/Microsoft.UI.Xaml.XamlTypeInfo.h>
++
++#include "nativeModules.g.h"
+diff --git a/RnDiffApp/windows/rndiffapp/.gitignore b/RnDiffApp/windows/rndiffapp/.gitignore
+deleted file mode 100644
+index 917243b..0000000
+--- a/RnDiffApp/windows/rndiffapp/.gitignore
++++ /dev/null
+@@ -1 +0,0 @@
+-/Bundle
+diff --git a/RnDiffApp/windows/rndiffapp/App.idl b/RnDiffApp/windows/rndiffapp/App.idl
+deleted file mode 100644
+index 97be277..0000000
+--- a/RnDiffApp/windows/rndiffapp/App.idl
++++ /dev/null
+@@ -1,3 +0,0 @@
+-namespace rndiffapp
+-{
+-}
+diff --git a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cpp b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cpp
+deleted file mode 100644
+index 0203d21..0000000
+--- a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cpp
++++ /dev/null
+@@ -1,13 +0,0 @@
+-// AutolinkedNativeModules.g.cpp contents generated by "react-native autolink-windows"
+-#include "pch.h"
+-#include "AutolinkedNativeModules.g.h"
+-
+-
+-namespace winrt::Microsoft::ReactNative
+-{
+-
+-void RegisterAutolinkedNativeModulePackages(winrt::Windows::Foundation::Collections::IVector<winrt::Microsoft::ReactNative::IReactPackageProvider> const& packageProviders)
+-{
+-}
+-
+-}
+diff --git a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.h b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.h
+deleted file mode 100644
+index 7b18bc4..0000000
+--- a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.h
++++ /dev/null
+@@ -1,10 +0,0 @@
+-// AutolinkedNativeModules.g.h contents generated by "react-native autolink-windows"
+-#pragma once
+-
+-
+-namespace winrt::Microsoft::ReactNative
+-{
+-
+-void RegisterAutolinkedNativeModulePackages(winrt::Windows::Foundation::Collections::IVector<winrt::Microsoft::ReactNative::IReactPackageProvider> const& packageProviders);
+-
+-}
+diff --git a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h
+deleted file mode 100644
+index 5e3a0f9..0000000
+--- a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h
++++ /dev/null
+@@ -1,15 +0,0 @@
+-#pragma once
+-
+-#include "winrt/Microsoft.ReactNative.h"
+-
+-
+-namespace winrt::rndiffapp::implementation
+-{
+-    struct ReactPackageProvider : winrt::implements<ReactPackageProvider, winrt::Microsoft::ReactNative::IReactPackageProvider>
+-    {
+-    public: // IReactPackageProvider
+-        void CreatePackage(winrt::Microsoft::ReactNative::IReactPackageBuilder const &packageBuilder) noexcept;
+-    };
+-} // namespace winrt::rndiffapp::implementation
+-
+-
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp_TemporaryKey.pfx b/RnDiffApp/windows/rndiffapp/rndiffapp_TemporaryKey.pfx
+deleted file mode 100644
+index e5a00a2b0676767a7a34fc3fd44a33e8e11d9391..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 2614
+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
+PhjU|&qm82f>m&aM`d6XS
+
