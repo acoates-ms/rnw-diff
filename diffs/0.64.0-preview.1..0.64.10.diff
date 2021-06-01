@@ -1,0 +1,432 @@
+diff --git a/RnDiffApp/ios/Podfile b/RnDiffApp/ios/Podfile
+index 18369a7e..387c32cc 100644
+--- a/RnDiffApp/ios/Podfile
++++ b/RnDiffApp/ios/Podfile
+@@ -3,7 +3,7 @@ require_relative '../node_modules/@react-native-community/cli-platform-ios/nativ
+ 
+ platform :ios, '10.0'
+ 
+-target 'HelloWorld' do
++target 'RnDiffApp' do
+   config = use_native_modules!
+ 
+   use_react_native!(
+@@ -12,7 +12,7 @@ target 'HelloWorld' do
+     :hermes_enabled => false
+   )
+ 
+-  target 'HelloWorldTests' do
++  target 'RnDiffAppTests' do
+     inherit! :complete
+     # Pods for testing
+   end
+diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
+index ac2bf6d3..13a9794b 100644
+--- a/RnDiffApp/package.json
++++ b/RnDiffApp/package.json
+@@ -7,12 +7,13 @@
+     "ios": "react-native run-ios",
+     "start": "react-native start",
+     "test": "jest",
+-    "lint": "eslint ."
++    "lint": "eslint .",
++    "windows": "react-native run-windows"
+   },
+   "dependencies": {
+     "react": "17.0.1",
+     "react-native": "0.64.1",
+-    "react-native-windows": "0.64.0-preview.1"
++    "react-native-windows": "0.64.10"
+   },
+   "devDependencies": {
+     "@babel/core": "^7.12.9",
+@@ -27,4 +28,4 @@
+   "jest": {
+     "preset": "react-native"
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/RnDiffApp/windows/BuildFlags.props b/RnDiffApp/windows/BuildFlags.props
+deleted file mode 100644
+index 869733a6..00000000
+--- a/RnDiffApp/windows/BuildFlags.props
++++ /dev/null
+@@ -1,10 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+-
+-  <!-- Flags can be added here to effect the compilation of Microsoft.ReactNative -->
+-  <PropertyGroup Label="Microsoft.ReactNative Build Flags">
+-    <UseWinUI3>false</UseWinUI3>
+-    <UseHermes>false</UseHermes>
+-  </PropertyGroup>
+-
+-</Project>
+diff --git a/RnDiffApp/windows/ExperimentalFeatures.props b/RnDiffApp/windows/ExperimentalFeatures.props
+new file mode 100644
+index 00000000..8164395c
+--- /dev/null
++++ b/RnDiffApp/windows/ExperimentalFeatures.props
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++
++  <PropertyGroup Label="Microsoft.ReactNative Experimental Features">
++    
++    <!--
++      Changes compilation to assume use of WinUI 3 instead of System XAML.
++      Requires creation of new project.
++
++      See https://microsoft.github.io/react-native-windows/docs/winui3
++    -->
++    <UseWinUI3>false</UseWinUI3>
++
++    <!--
++      Compiles Hermes-related code and sets it to the default JS engine.
++      Requires the "ReactNative.Hermes.Windows" NuGet package.
++      
++      See https://microsoft.github.io/react-native-windows/docs/hermes
++    -->
++    <UseHermes>false</UseHermes>
++  
++  </PropertyGroup>
++
++</Project>
+\ No newline at end of file
+diff --git a/RnDiffApp/windows/NuGet.Config b/RnDiffApp/windows/NuGet.Config
+new file mode 100644
+index 00000000..37da5d50
+--- /dev/null
++++ b/RnDiffApp/windows/NuGet.Config
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="utf-8"?>
++<configuration>
++  <config>
++    <add key="repositoryPath" value="packages" />
++  </config>
++  <packageSources>
++    <clear />
++    <add key="Nuget.org" value="https://api.nuget.org/v3/index.json" />
++    <add key="react-native" value="https://pkgs.dev.azure.com/ms/react-native/_packaging/react-native-public/nuget/v3/index.json" />
++  </packageSources>
++  <disabledPackageSources>
++    <clear />
++  </disabledPackageSources>  
++</configuration>
+diff --git a/RnDiffApp/windows/rndiffapp/App.cpp b/RnDiffApp/windows/rndiffapp/App.cpp
+index 08ecd61e..bee80ae4 100644
+--- a/RnDiffApp/windows/rndiffapp/App.cpp
++++ b/RnDiffApp/windows/rndiffapp/App.cpp
+@@ -5,15 +5,13 @@
+ #include "AutolinkedNativeModules.g.h"
+ #include "ReactPackageProvider.h"
+ 
+-
+-using namespace winrt::rndiffapp;
+-using namespace winrt::rndiffapp::implementation;
+ using namespace winrt;
+ using namespace Windows::UI::Xaml;
+ using namespace Windows::UI::Xaml::Controls;
+ using namespace Windows::UI::Xaml::Navigation;
+ using namespace Windows::ApplicationModel;
+-
++namespace winrt::rndiffapp::implementation
++{
+ /// <summary>
+ /// Initializes the singleton application object.  This is the first line of
+ /// authored code executed, and as such is the logical equivalent of main() or
+@@ -54,7 +52,19 @@ void App::OnLaunched(activation::LaunchActivatedEventArgs const& e)
+     super::OnLaunched(e);
+ 
+     Frame rootFrame = Window::Current().Content().as<Frame>();
+-    rootFrame.Navigate(xaml_typename<rndiffapp::MainPage>(), box_value(e.Arguments()));
++    rootFrame.Navigate(xaml_typename<MainPage>(), box_value(e.Arguments()));
++}
++
++/// <summary>
++/// Invoked when the application is activated by some means other than normal launching.
++/// </summary>
++void App::OnActivated(Activation::IActivatedEventArgs const &e) {
++  auto preActivationContent = Window::Current().Content();
++  super::OnActivated(e);
++  if (!preActivationContent && Window::Current()) {
++    Frame rootFrame = Window::Current().Content().as<Frame>();
++    rootFrame.Navigate(xaml_typename<MainPage>(), nullptr);
++  }
+ }
+ 
+ /// <summary>
+@@ -78,3 +88,5 @@ void App::OnNavigationFailed(IInspectable const&, NavigationFailedEventArgs cons
+ {
+     throw hresult_error(E_FAIL, hstring(L"Failed to load Page ") + e.SourcePageType().Name);
+ }
++
++} // namespace winrt::rndiffapp::implementation
+diff --git a/RnDiffApp/windows/rndiffapp/App.h b/RnDiffApp/windows/rndiffapp/App.h
+index b924cff3..b44177bd 100644
+--- a/RnDiffApp/windows/rndiffapp/App.h
++++ b/RnDiffApp/windows/rndiffapp/App.h
+@@ -10,11 +10,10 @@ namespace winrt::rndiffapp::implementation
+     {
+         App() noexcept;
+         void OnLaunched(activation::LaunchActivatedEventArgs const&);
++        void OnActivated(Windows::ApplicationModel::Activation::IActivatedEventArgs const &e);
+         void OnSuspending(IInspectable const&, Windows::ApplicationModel::SuspendingEventArgs const&);
+         void OnNavigationFailed(IInspectable const&, Windows::UI::Xaml::Navigation::NavigationFailedEventArgs const&);
+       private:
+         using super = AppT<App>;
+     };
+ } // namespace winrt::rndiffapp::implementation
+-
+-
+diff --git a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cpp b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cpp
+index bd854b04..7ab2110d 100644
+--- a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cpp
++++ b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cpp
+@@ -1,5 +1,5 @@
+ // AutolinkedNativeModules.g.cpp contents generated by "react-native autolink-windows"
+-
++// clang-format off
+ #include "pch.h"
+ #include "AutolinkedNativeModules.g.h"
+ 
+diff --git a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.h b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.h
+index 1bf5f894..f28bb8be 100644
+--- a/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.h
++++ b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.h
+@@ -1,5 +1,5 @@
+ // AutolinkedNativeModules.g.h contents generated by "react-native autolink-windows"
+-
++// clang-format off
+ #pragma once
+ 
+ namespace winrt::Microsoft::ReactNative
+diff --git a/RnDiffApp/windows/rndiffapp/MainPage.cpp b/RnDiffApp/windows/rndiffapp/MainPage.cpp
+index d903408d..7db5a47c 100644
+--- a/RnDiffApp/windows/rndiffapp/MainPage.cpp
++++ b/RnDiffApp/windows/rndiffapp/MainPage.cpp
+@@ -6,8 +6,6 @@
+ 
+ #include "App.h"
+ 
+-
+-
+ using namespace winrt;
+ using namespace Windows::UI::Xaml;
+ 
+@@ -20,5 +18,3 @@ namespace winrt::rndiffapp::implementation
+         ReactRootView().ReactNativeHost(app->Host());
+     }
+ }
+-
+-
+diff --git a/RnDiffApp/windows/rndiffapp/MainPage.h b/RnDiffApp/windows/rndiffapp/MainPage.h
+index df26defa..0da1b28a 100644
+--- a/RnDiffApp/windows/rndiffapp/MainPage.h
++++ b/RnDiffApp/windows/rndiffapp/MainPage.h
+@@ -2,7 +2,6 @@
+ #include "MainPage.g.h"
+ #include <winrt/Microsoft.ReactNative.h>
+ 
+-
+ namespace winrt::rndiffapp::implementation
+ {
+     struct MainPage : MainPageT<MainPage>
+@@ -18,4 +17,3 @@ namespace winrt::rndiffapp::factory_implementation
+     };
+ }
+ 
+-
+diff --git a/RnDiffApp/windows/rndiffapp/MainPage.xaml b/RnDiffApp/windows/rndiffapp/MainPage.xaml
+index 3bb8a842..3ba991dc 100644
+--- a/RnDiffApp/windows/rndiffapp/MainPage.xaml
++++ b/RnDiffApp/windows/rndiffapp/MainPage.xaml
+@@ -10,7 +10,7 @@
+     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+     <react:ReactRootView 
+         x:Name="ReactRootView"
+-        ComponentName="rndiffapp"
++        ComponentName="RnDiffApp"
+         Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+         MinHeight="400"/>
+ </Page>
+diff --git a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp
+index e0ab3831..e1d8e38e 100644
+--- a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp
++++ b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cpp
+@@ -2,7 +2,6 @@
+ #include "ReactPackageProvider.h"
+ #include "NativeModules.h"
+ 
+-
+ using namespace winrt::Microsoft::ReactNative;
+ 
+ namespace winrt::rndiffapp::implementation
+@@ -14,5 +13,3 @@ void ReactPackageProvider::CreatePackage(IReactPackageBuilder const &packageBuil
+ }
+ 
+ } // namespace winrt::rndiffapp::implementation
+-
+-
+diff --git a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h
+index 5e3a0f91..13f299bd 100644
+--- a/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h
++++ b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.h
+@@ -2,7 +2,6 @@
+ 
+ #include "winrt/Microsoft.ReactNative.h"
+ 
+-
+ namespace winrt::rndiffapp::implementation
+ {
+     struct ReactPackageProvider : winrt::implements<ReactPackageProvider, winrt::Microsoft::ReactNative::IReactPackageProvider>
+@@ -12,4 +11,3 @@ namespace winrt::rndiffapp::implementation
+     };
+ } // namespace winrt::rndiffapp::implementation
+ 
+-
+diff --git a/RnDiffApp/windows/rndiffapp/packages.config b/RnDiffApp/windows/rndiffapp/packages.config
+index 7ad3ffb8..d4139656 100644
+--- a/RnDiffApp/windows/rndiffapp/packages.config
++++ b/RnDiffApp/windows/rndiffapp/packages.config
+@@ -1,5 +1,5 @@
+ ﻿<?xml version="1.0" encoding="utf-8"?>
+ <packages>
+-  <package id="Microsoft.Windows.CppWinRT" version="2.0.200615.7" targetFramework="native" />
++  <package id="Microsoft.Windows.CppWinRT" version="2.0.210312.4" targetFramework="native" />
+   <package id="Microsoft.UI.Xaml" version="2.3.191129002" targetFramework="native" />
+ </packages>
+\ No newline at end of file
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj b/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
+index f5739d14..5bd67e43 100644
+--- a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
++++ b/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <Project ToolsVersion="16.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+-  <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.200615.7\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.200615.7\build\native\Microsoft.Windows.CppWinRT.props')" />
+-  <Import Project="$(SolutionDir)\BuildFlags.props" Condition="Exists('$(SolutionDir)\BuildFlags.props')" />
++  <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props')" />
++  <Import Project="$(SolutionDir)\ExperimentalFeatures.props" Condition="Exists('$(SolutionDir)\ExperimentalFeatures.props')" />
+   <PropertyGroup Label="Globals">
+     <CppWinRTOptimized>true</CppWinRTOptimized>
+     <CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
+@@ -183,15 +183,15 @@
+     <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CppApp.targets'))" />
+   </Target>
+   <ImportGroup Label="ExtensionTargets">
+-    <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.200615.7\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.200615.7\build\native\Microsoft.Windows.CppWinRT.targets')" />
++    <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets')" />
+     <Import Project="..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets" Condition="Exists('..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets')" />
+   </ImportGroup>
+   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+     <PropertyGroup>
+       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+     </PropertyGroup>
+-    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.200615.7\build\native\Microsoft.Windows.CppWinRT.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.200615.7\build\native\Microsoft.Windows.CppWinRT.props'))" />
+-    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.200615.7\build\native\Microsoft.Windows.CppWinRT.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.200615.7\build\native\Microsoft.Windows.CppWinRT.targets'))" />
++    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props'))" />
++    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets'))" />
+     <Error Condition="!Exists('..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets'))" />
+   </Target>
+ </Project>
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp_TemporaryKey.pfx b/RnDiffApp/windows/rndiffapp/rndiffapp_TemporaryKey.pfx
+index a03499ae4dea63e3e7d1a51c66efa46396cfdc13..6f288e458540ca0e080e2f33c273113acc9d58c9 100644
+GIT binary patch
+delta 2353
+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
+X9x+cBbLb<eW_N*a4LysN0s;rnh}>bO
+
+delta 2353
+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
+Xn_wB6=n>qtdx76euzjg(0s;rnkPc}A
+
