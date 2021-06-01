@@ -1,5 +1,7 @@
 // @ts-check
 const { readFileSync, writeFileSync, existsSync } = require("fs");
+const semver = require("semver");
+
 // TODO Diffs need to ignore pfx files and android/ios dirs
 
 const path = require("path");
@@ -83,7 +85,7 @@ function getReleases() {
 
 function addReleaseToList(rnwVersion) {
   getReleases().push(rnwVersion);
-  releases = releases.sort();
+  releases = releases.filter(a => a).sort((a, b) => (0 - semver.compare(a,b)));
   writeFileSync(releasesFile, releases.join("\n"));
 }
 
@@ -140,7 +142,6 @@ function run() {
   console.log("Running: " + npmRnVersionsCmd);
   const rnVersions = JSON.parse(execSync(npmRnVersionsCmd).toString());
 
-  const semver = require("semver");
   let rnVersion = rnVersions[0];
   rnVersions.forEach((version) => {
     if (semver.satisfies(version, rnRequiredVersion)) {
@@ -154,8 +155,7 @@ function run() {
 
   guardExisting(rnwVersion);
   createNewRelease(rnwVersion, rnVersion);
-  // No-one using diffs right now
-  //generateDiffs(rnwVersion);
+  generateDiffs(rnwVersion);
   addReleaseToList(rnwVersion);
 }
 
