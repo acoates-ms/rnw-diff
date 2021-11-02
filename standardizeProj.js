@@ -13,12 +13,12 @@ function standardizeSolutionFile() {
   const slnFilePath = `./${appName}/windows/${appName}.sln`;
   const sln = readFileSync(slnFilePath);
   const reg = new RegExp(
-    `Project.*"${appName}", "${appName}\\\\${appName}.vcxproj", "(.*)"`,
+    `Project.*"${appName}", "${appName}\\\\${appName}.(vcxproj|csproj)", "(.*)"`,
     "mi"
   );
   const matches = reg.exec(sln.toString());
 
-  projectGuid = matches[1];
+  projectGuid = matches[2];
 
   if (!projectGuid) {
     throw new Error("Failed to find app projects guid");
@@ -32,9 +32,13 @@ function standardizeSolutionFile() {
 }
 
 function standardizeAppsCppProjectFile() {
-  const appProjPath = `./${appName}/windows/${appName}/${appName}.vcxproj`;
+  let appProjPath = `./${appName}/windows/${appName}/${appName}.vcxproj`;
   if (!existsSync(appProjPath)) {
-    return;
+    // Try csproj instead
+    appProjPath = `./${appName}/windows/${appName}/${appName}.csproj`;
+    if (!existsSync(appProjPath)) {
+      return;
+    }
   }
   const appProj = readFileSync(appProjPath);
 
