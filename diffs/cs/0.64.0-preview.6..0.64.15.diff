@@ -1,0 +1,223 @@
+diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
+index 5fc4614f..80aa0df0 100644
+--- a/RnDiffApp/package.json
++++ b/RnDiffApp/package.json
+@@ -13,7 +13,7 @@
+   "dependencies": {
+     "react": "17.0.1",
+     "react-native": "0.64.2",
+-    "react-native-windows": "0.64.0-preview.6"
++    "react-native-windows": "0.64.15"
+   },
+   "devDependencies": {
+     "@babel/core": "^7.12.9",
+diff --git a/RnDiffApp/windows/BuildFlags.props b/RnDiffApp/windows/BuildFlags.props
+deleted file mode 100644
+index 869733a6..00000000
+--- a/RnDiffApp/windows/BuildFlags.props
++++ /dev/null
+@@ -1,10 +0,0 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+-
+-  <!-- Flags can be added here to effect the compilation of Microsoft.ReactNative -->
+-  <PropertyGroup Label="Microsoft.ReactNative Build Flags">
+-    <UseWinUI3>false</UseWinUI3>
+-    <UseHermes>false</UseHermes>
+-  </PropertyGroup>
+-
+-</Project>
+diff --git a/RnDiffApp/windows/ExperimentalFeatures.props b/RnDiffApp/windows/ExperimentalFeatures.props
+new file mode 100644
+index 00000000..8164395c
+--- /dev/null
++++ b/RnDiffApp/windows/ExperimentalFeatures.props
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="utf-8"?>
++<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++
++  <PropertyGroup Label="Microsoft.ReactNative Experimental Features">
++    
++    <!--
++      Changes compilation to assume use of WinUI 3 instead of System XAML.
++      Requires creation of new project.
++
++      See https://microsoft.github.io/react-native-windows/docs/winui3
++    -->
++    <UseWinUI3>false</UseWinUI3>
++
++    <!--
++      Compiles Hermes-related code and sets it to the default JS engine.
++      Requires the "ReactNative.Hermes.Windows" NuGet package.
++      
++      See https://microsoft.github.io/react-native-windows/docs/hermes
++    -->
++    <UseHermes>false</UseHermes>
++  
++  </PropertyGroup>
++
++</Project>
+\ No newline at end of file
+diff --git a/RnDiffApp/windows/NuGet.Config b/RnDiffApp/windows/NuGet.Config
+new file mode 100644
+index 00000000..37da5d50
+--- /dev/null
++++ b/RnDiffApp/windows/NuGet.Config
+@@ -0,0 +1,14 @@
++<?xml version="1.0" encoding="utf-8"?>
++<configuration>
++  <config>
++    <add key="repositoryPath" value="packages" />
++  </config>
++  <packageSources>
++    <clear />
++    <add key="Nuget.org" value="https://api.nuget.org/v3/index.json" />
++    <add key="react-native" value="https://pkgs.dev.azure.com/ms/react-native/_packaging/react-native-public/nuget/v3/index.json" />
++  </packageSources>
++  <disabledPackageSources>
++    <clear />
++  </disabledPackageSources>  
++</configuration>
+diff --git a/RnDiffApp/windows/RnDiffApp/App.xaml.cs b/RnDiffApp/windows/RnDiffApp/App.xaml.cs
+index 521d1873..872720ac 100644
+--- a/RnDiffApp/windows/RnDiffApp/App.xaml.cs
++++ b/RnDiffApp/windows/RnDiffApp/App.xaml.cs
+@@ -41,9 +41,23 @@ namespace RnDiffApp
+         protected override void OnLaunched(LaunchActivatedEventArgs e)
+         {
+             base.OnLaunched(e);
+-            var frame = Window.Current.Content as Frame;
+-            frame.Navigate(typeof(MainPage));
+-            Window.Current.Activate();
++            var frame = (Frame)Window.Current.Content;
++            frame.Navigate(typeof(MainPage), e.Arguments);
++        }
++
++        /// <summary>
++        /// Invoked when the application is activated by some means other than normal launching.
++        /// </summary>
++        protected override void OnActivated(IActivatedEventArgs e)
++        {
++            var preActivationContent = Window.Current.Content;
++            base.OnActivated(e);
++            if (preActivationContent == null && Window.Current != null)
++            {
++                // Display the initial content
++                var frame = (Frame)Window.Current.Content;
++                frame.Navigate(typeof(MainPage), null);
++            }
+         }
+     }
+ }
+diff --git a/RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj b/RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj
+index 1baf6c6c..0531a5f3 100644
+--- a/RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj
++++ b/RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj
+@@ -1,7 +1,7 @@
+ ﻿<?xml version="1.0" encoding="utf-8"?>
+ <Project ToolsVersion="16.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+-  <Import Project="$(SolutionDir)\BuildFlags.props" Condition="Exists('$(SolutionDir)\BuildFlags.props')" />
++  <Import Project="$(SolutionDir)\ExperimentalFeatures.props" Condition="Exists('$(SolutionDir)\ExperimentalFeatures.props')" />
+   <PropertyGroup Label="ReactNativeWindowsProps">
+     <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'node_modules\react-native-windows\package.json'))\node_modules\react-native-windows\</ReactNativeWindowsDir>
+   </PropertyGroup>
+diff --git a/RnDiffApp/windows/RnDiffApp/RnDiffApp_TemporaryKey.pfx b/RnDiffApp/windows/RnDiffApp/RnDiffApp_TemporaryKey.pfx
+index a5bcdbe228a112fceb6c04957ed27ffe849d8b7b..b7d103ba1bfb2260ed86056ccb994cb9cd240131 100644
+GIT binary patch
+delta 2355
+zcmV-33C#Ak6t)zQXn)E9`*r`*P|pGa2haq91lXuWKL%$Uu0D|dGH!qWG-qzf!<n=J
+zoOoXR#q#5mz8`nE{_8olT^tW6W2QWS*uzoZ06?FFs)Jq+Q?eiFN^dxzOim-fsA)Zv
+zfcKNUKn=krO&6{jAx)xl;mdmQ9C*Zbqep_Eub^;=;R!BUwSNb_E9H_T=^3K33=szl
+zn}F_ks^jam86gH0kKPoqMAXvpn#U_u+9ns+@@mkgR@0zVPj2ZUX9vr1rd50z@9S_V
+zyzOA-KoTmx)6YJp5wQE#gpx8wv-}hJV#`vq`%m1HTB;Kr-Fj8<erl0@TPwts_aE+3
+zkR)<<EFac_2!9AFm17@Lzcd1Ng$kH$NN|w(Z51%5wfUebBc@>GWz&o_*=e4OsG9q9
+z0!b06!x^pW+jk#eK4ga=paA@DHAnFM1&X}W0Qu1@cj4<SXVl!1{Hkh5rVKcv)74U)
+z<l!N*Mqj*O*(s|sR&O^b5s!PQVKH+Xk?h7Zw+GiOet*C4Jpw&J;A?Ba+YsNa+LOX|
+zue)$8`NQ32dU*?{?O#cC5ugCAJxYMhhFC!VnsO;@1jPhDtt6y3xl0!A^K=#p=9FJM
+z!o0)!+xsFV!(d*N@?)ijlFk*v4*G(J29SHkcX49-M8U%DtDa8)S)BSvK5|lLJM?WV
+zw0q1aF@H$FLn4@v(id4WWeS&Yj;cQ~R6_@;LDLpaM@@PrB>=^Hfj3i7Hj-&YjUq<?
+z&U+d<5wa2OXqIV!eE0`cfC3sq`<ktAj{;X~9N?k~B*LpSsR#J)`3RxL(cX4FuU;m9
+zXhJV0xu8{W!KmTu3$g@s(rzH|)ThT?E4YfeH-B`u9qUV$#TFsupfdo3MDd3kQfh4d
+zKln^OXz)z|U&3wOvha9l&p{H;Qm-1Dx5CQ{N>&y7mInA@Zd36lhfUCJNyGg>>p@Ky
+z$PWXV!fmZ1)*r$--}nc^b&b%~iu$~Z5JlYSSks;r*s93X;gg(wuG^EVuXvjf!zq>B
+zdVeRDKYT~$0hH~cZ@xK^QnKl>R44EeU@PV)rLGMT1W?gBFx4Gcy$^-mXNR|jwA8E2
+zu@tq;@tKgCF>B=HPQ%sy`^~1(wuLNZPEYs9P}O+2^a<o^-O2+r_|LDl{lo6!`2<%8
+z9oS&ZbQ(EBr3$9pV<KRR>$hlEPXLV)PJe09K7(Sy>AQOcwd%5-WfPB158-EgVsF>c
+zZNQ3l#X+eVd_leya@8BQX@EBBbF;rWv=G2(g<mvm<jY1CyGtagY~O>eVr~YF?f-6a
+z4mOQPy>uhwx@k`#Tibq(f?FrHF*v64nvIy}D)xZ1aPt*Uip5jvC<Kj+2X#O$<bTrX
+zDTEcBba^25SH-;l)Om1bZOS0b?(!qz6sog#yYi%&#>@g4YJ_%WqAqb;^5#JWiHaJ7
+zlW1MgwKiU?%4*qth)?4o!p_~TS}WqAv&y<ercj@_$tfk?vZ=vipe|F@!=P|V&~4LN
+zvQvT-j}#v_9RG9x^ve!!|2wJW)PGN;ZP{pG^6Bg;`^h5QJUp<)rOUUt2P!ZaHKINQ
+zdyBNQY2$!=xV#L_BwABQ<R*2+`}H2!oUbz-_v>L;YHlE^Mf>=j7v@PElNg15G80@I
+z#d1_V*i7`l3&K^OZeW!xrTR8h1!Y`b<SDCl@Zv`?fzvP(1_>&LNQU<f0h3+@B1bs@
+zG5}%#W&mRVVgO<QVgM}wW&mRVV*oh-EdVqCGypXKG5{?AH~?V)WB_9TEdVwEG5|CH
+zG5|9GV*q0SVE{1zH2`D)WRu4Qnt!UyYYsxWy4(T+2hf0m1BjMz2CT~L*gywj<1N?L
+zvD?DF+ROS+)e)cpI1;Y&OH|+mQQSFxwyCUi>^E0zLlJT+A_envbw@SzVxz=gLk`!Q
+z96v*Z?+5dJT-etV$20?oi=5fu(l|PAx){Hw@++-*IXN}i!=+JY<#i;H`hO;iMzE&`
+zFIbMm$GSn#dwxt@(nA!Oh|n>HSB2TUm60rfLvh^rwG<mO1BiQBCN9N)>K$0xMeiA+
+z6`kHn$?FL&kH@K`IoV0_7rqOfGYN++qy>Gi>o-Y=U9q43>7piM2^J00sVtVHUbr-U
+zgG^oQ|0x%L)`^G<+laN4eSeeu#SCbrU}nza5r25Gxtn~og_$`d=m2}L-$(~1*K}XF
+zRt&yG#FJ*~;MSGnvA&rYpx%LR3~MN2$t}T>>}%=IyCI#|mG{}4LAJ(4F3<ZWzD!3d
+zMZVVMx6zZG{P=%NSbFQqwSoU&vrO+jwJIN~=TKQTh8G&r|8@03RDZT8^F9rK6NF4_
+zXX|>m(*rA>8ST&7;pIg-)2WKU4+h%REbLai?2f@HOPT>aaQ>4^Vt7IXDNAizKew#J
+z5EhhM6}Gl2)(w_+onpRb(P98;koo@mm+(mW?@2LmK<TNx5#L)kpACyDwH54*1@;eg
+z6!E-g2TsKAWqW3>$$uabBPGD0=3Ho$p9`B~fFl2B5;>wX)c@qz1}&}ty9$yNBt(wf
+zL9pdUG;-L~q*7usO?I@Rp!F)1;4{T83Klr$r7{<i>jt=XBz#QHvrB#|7`K}ke**Ch
+zRF-lq?lT(+S&-6wfHeXIs4KvQ{4c~TQ_FMl`=ygtSJpFnuz#P_eN6_c^t#0=A<?Fy
+zEvw=+mDVw!$C>>S<oJkUdwzu*O}E95)34mo4b4$%TsRd-+}cx<p1#od)4GIR1!<A_
+zHbQQTZw!yBS19^0(pd8lAV>-%b~R=8@E_;Z*ok~$2<7_l-60HP_~V`m8GkiX<2FJF
+zB%F9hV|!>0P=Ct>Ni2*4g0-j6GP7!FXi?MYGJhm~!6BK1UEJVWpD1SlG6Gk+{p{TR
+z#El}OgR71Ibzk{De=+MQqzg-fZJ?AD_e2$N->a5Q)YwRzY|~01?}`t#BArAkDtmIB
+zrENK~4-~F4xv9GVZbNb}0sX8#Fia1oBALj)uVBWYe_RMwlqXK+Ndd?h*&U+!){(S@
+zF;)vZ22g=o(e%ieW-vQ2A20_71uG5%0vZGq95f@(0`n~<_<|pR^SSN{yd()W1QeHY
+ZOkI(??qZ0I4=;`@SOc+Hg75+Y2hfujY6$=U
+
+delta 2355
+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
+ZCE-jle`<8&cC#Y~y-`bW$s_^-2hfowaYFzA
+

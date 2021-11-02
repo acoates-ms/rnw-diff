@@ -1,0 +1,290 @@
+diff --git a/RnDiffApp/metro.config.js b/RnDiffApp/metro.config.js
+index 9a167301..a1e6b552 100644
+--- a/RnDiffApp/metro.config.js
++++ b/RnDiffApp/metro.config.js
+@@ -7,8 +7,16 @@
+ const path = require('path');
+ const blacklist = require('metro-config/src/defaults/blacklist');
+ 
++const {
++  getModulesRunBeforeMainModule,
++  reactNativePlatformResolver,
++} = require('react-native-windows/metro-react-native-platform');
++
+ module.exports = {
+   resolver: {
++    resolveRequest: reactNativePlatformResolver({
++      windows: 'react-native-windows',
++    }),
+     blacklistRE: blacklist([
+       // This stops "react-native run-windows" from causing the metro server to crash if its already running
+       new RegExp(
+@@ -22,7 +30,13 @@ module.exports = {
+       ),
+     ]),
+   },
++  serializer: {
++    getModulesRunBeforeMainModule,
++  },
+   transformer: {
++    // The cli defaults this to a full path to react-native, which bypasses the reactNativePlatformResolver above
++    // Hopefully we can fix the default in the future
++    assetRegistryPath: 'react-native/Libraries/Image/AssetRegistry',
+     getTransformOptions: async () => ({
+       transform: {
+         experimentalImportSupport: false,
+diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
+index ecc18174..9a0490ab 100644
+--- a/RnDiffApp/package.json
++++ b/RnDiffApp/package.json
+@@ -13,7 +13,7 @@
+   "dependencies": {
+     "react": "16.11.0",
+     "react-native": "^0.62.0-0",
+-    "react-native-windows": "0.62.4"
++    "react-native-windows": "0.62.0-preview.3"
+   },
+   "devDependencies": {
+     "@babel/core": "^7.6.2",
+diff --git a/RnDiffApp/windows/RnDiffApp.sln b/RnDiffApp/windows/RnDiffApp.sln
+index 832f49b4..22c034d5 100644
+--- a/RnDiffApp/windows/RnDiffApp.sln
++++ b/RnDiffApp/windows/RnDiffApp.sln
+@@ -39,7 +39,7 @@ Global
+ 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+ 		..\node_modules\react-native-windows\JSI\Shared\JSI.Shared.vcxitems*{0cc28589-39e4-4288-b162-97b959f8b843}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Shared\Shared.vcxitems*{2049dbe9-8d13-42c9-ae4b-413ae38fffd0}*SharedItemsImports = 9
+-		..\node_modules\react-native-windows\Microsoft.ReactNative.SharedManaged\Microsoft.ReactNative.SharedManaged.projitems*{1af46aa5-f647-43e3-a27a-89975a3d0b54}*SharedItemsImports = 4
++		..\node_modules\react-native-windows\Microsoft.ReactNative.SharedManaged\Microsoft.ReactNative.SharedManaged.projitems*{9064b1a2-0a55-4f49-9628-4cda753fd024}*SharedItemsImports = 4
+ 		..\node_modules\react-native-windows\Microsoft.ReactNative.SharedManaged\Microsoft.ReactNative.SharedManaged.projitems*{67a1076f-7790-4203-86ea-4402ccb5e782}*SharedItemsImports = 13
+ 		..\node_modules\react-native-windows\JSI\Shared\JSI.Shared.vcxitems*{a62d504a-16b8-41d2-9f19-e2e86019e5e4}*SharedItemsImports = 4
+ 		..\node_modules\react-native-windows\Chakra\Chakra.vcxitems*{c38970c0-5fbf-4d69-90d8-cbac225ae895}*SharedItemsImports = 9
+diff --git a/RnDiffApp/windows/RnDiffApp/App.xaml.cs b/RnDiffApp/windows/RnDiffApp/App.xaml.cs
+index 4b59c769..e367cfad 100644
+--- a/RnDiffApp/windows/RnDiffApp/App.xaml.cs
++++ b/RnDiffApp/windows/RnDiffApp/App.xaml.cs
+@@ -3,32 +3,30 @@
+ namespace RnDiffApp
+ {
+     sealed partial class App : ReactApplication
++{
++    public App()
+     {
+-        public App()
+-        {
+-            MainComponentName = "RnDiffApp";
++        MainComponentName = "RnDiffApp";
+ 
+ #if BUNDLE
+-            JavaScriptBundleFile = "index.windows";
+-            InstanceSettings.UseWebDebugger = false;
+-            InstanceSettings.UseFastRefresh = false;
++        JavaScriptBundleFile = "index.windows";
++        InstanceSettings.UseWebDebugger = false;
++        InstanceSettings.UseFastRefresh = false;
+ #else
+-            JavaScriptMainModuleName = "index";
+-            InstanceSettings.UseWebDebugger = true;
+-            InstanceSettings.UseFastRefresh = true;
++        JavaScriptMainModuleName = "index";
++        InstanceSettings.UseWebDebugger = true;
++        InstanceSettings.UseFastRefresh = true;
+ #endif
+ 
+ #if DEBUG
+-            InstanceSettings.EnableDeveloperMenu = true;
++        InstanceSettings.EnableDeveloperMenu = true;
+ #else
+-            InstanceSettings.EnableDeveloperMenu = false;
++        InstanceSettings.EnableDeveloperMenu = false;
+ #endif
+ 
+-            Microsoft.ReactNative.Managed.AutolinkedNativeModules.RegisterAutolinkedNativeModulePackages(PackageProviders); // Includes any autolinked modules
+-            
+-            PackageProviders.Add(new Microsoft.ReactNative.Managed.ReactPackageProvider()); // Includes any modules in this project
++        PackageProviders.Add(new Microsoft.ReactNative.Managed.ReactPackageProvider()); // Includes any modules in this project
+ 
+-            InitializeComponent();
+-        }
++        InitializeComponent();
+     }
+ }
++}
+diff --git a/RnDiffApp/windows/RnDiffApp/AutolinkedNativeModules.g.cs b/RnDiffApp/windows/RnDiffApp/AutolinkedNativeModules.g.cs
+deleted file mode 100644
+index 4f311206..00000000
+--- a/RnDiffApp/windows/RnDiffApp/AutolinkedNativeModules.g.cs
++++ /dev/null
+@@ -1,14 +0,0 @@
+-﻿// AutolinkedNativeModules.g.cs -- contents generated by "react-native run-windows"
+-
+-using System.Collections.Generic;
+-
+-namespace Microsoft.ReactNative.Managed
+-{
+-    internal static class AutolinkedNativeModules
+-    {
+-        internal static void RegisterAutolinkedNativeModulePackages(IList<IReactPackageProvider> packageProviders)
+-        {
+-
+-        }
+-    }
+-}
+diff --git a/RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj b/RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj
+index f083dc5e..e07f75f0 100644
+--- a/RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj
++++ b/RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj
+@@ -22,6 +22,9 @@
+     <PackageCertificatePassword>password</PackageCertificatePassword>
+     <AppxGeneratePrisForPortableLibrariesEnabled>false</AppxGeneratePrisForPortableLibrariesEnabled>
+   </PropertyGroup>
++  <PropertyGroup>
++    <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'node_modules\react-native-windows\package.json'))\node_modules\react-native-windows\</ReactNativeWindowsDir>
++  </PropertyGroup>
+   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+     <DebugSymbols>true</DebugSymbols>
+     <OutputPath>bin\x86\Debug\</OutputPath>
+@@ -122,7 +125,6 @@
+       <DependentUpon>App.xaml</DependentUpon>
+     </Compile>
+     <Compile Include="Properties\AssemblyInfo.cs" />
+-    <Compile Include="AutolinkedNativeModules.g.cs" />
+   </ItemGroup>
+   <ItemGroup>
+     <AppxManifest Include="Package.appxmanifest">
+@@ -151,24 +153,22 @@
+       <Version>6.2.8</Version>
+     </PackageReference>
+   </ItemGroup>
++  <ItemGroup>
++    <ProjectReference Include="$(ReactNativeWindowsDir)\Microsoft.ReactNative\Microsoft.ReactNative.vcxproj">
++      <Project>{f7d32bd0-2749-483e-9a0d-1635ef7e3136}</Project>
++      <Name>Microsoft.ReactNative</Name>
++    </ProjectReference>
++    <PackageReference Include="Microsoft.UI.Xaml">
++      <Version>2.3.191129002</Version>
++    </PackageReference>
++  </ItemGroup>
++  <Import Project="$(ReactNativeWindowsDir)\Microsoft.ReactNative.SharedManaged\Microsoft.ReactNative.SharedManaged.projitems" Label="Shared" />
+   <PropertyGroup Condition=" '$(VisualStudioVersion)' == '' or '$(VisualStudioVersion)' &lt; '16.0' ">
+     <VisualStudioVersion>16.0</VisualStudioVersion>
+   </PropertyGroup>
+   <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+-  <PropertyGroup Label="ReactNativeWindowsNodeProps">
+-    <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'node_modules\react-native-windows\package.json'))\node_modules\react-native-windows\</ReactNativeWindowsDir>
+-  </PropertyGroup>
+-  <ImportGroup Label="ReactNativeWindowsNodeTargets">
+-    <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CSharpApp.props" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CSharpApp.props')" />
+-    <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CSharpApp.targets" Condition="Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CSharpApp.targets')" />
+-  </ImportGroup>
+-  <Target Name="EnsureReactNativeWindowsNodeTargets" BeforeTargets="PrepareForBuild">
+-    <PropertyGroup>
+-      <ErrorText>This project references targets in your node_modules\react-native-windows folder. The missing file is {0}.</ErrorText>
+-    </PropertyGroup>
+-    <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CSharpApp.props')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CSharpApp.props'))" />
+-    <Error Condition="!Exists('$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CSharpApp.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.Uwp.CSharpApp.targets'))" />
+-  </Target>
++  <Import Project="$(ReactNativeWindowsDir)\PropertySheets\Bundle.props" />
++  <Import Project="$(ReactNativeWindowsDir)\PropertySheets\Bundle.targets" />
+   <PropertyGroup>
+     <PreBuildEvent>
+     </PreBuildEvent>
+diff --git a/RnDiffApp/windows/RnDiffApp/RnDiffApp_TemporaryKey.pfx b/RnDiffApp/windows/RnDiffApp/RnDiffApp_TemporaryKey.pfx
+index 3509890c05e336d2bc3d4a50213ae0285d45acd7..a7c00851a107a58b4e367772e03e2ef35f886d4e 100644
+GIT binary patch
+delta 2355
+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
+ZmHnAw1%01{jz4lYWTPyi1d##)2hfc|c|`yK
+
+delta 2355
+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
+ZLS-z4q-~Ab(;m_JZj_^u%9#QJ2hb-CX`TQ8
+
