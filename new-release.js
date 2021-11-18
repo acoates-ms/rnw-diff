@@ -192,7 +192,6 @@ function run() {
     usageAndExit();
   }
 
-
   /** @type {'both' | 'cs' | 'cpp' | 'mac'} */
   let apptype = "both";
   if (process.argv.length == 4) {
@@ -208,6 +207,8 @@ function run() {
   ) {
     usageAndExit();
   }
+
+  guardExisting(rnwVersion, apptype === 'mac');
 
   const rnPackageName =
     apptype === "mac" ? "react-native-macos" : "react-native-windows";
@@ -240,7 +241,6 @@ function run() {
 
   console.log(`rnVersion: ${rnVersion}`);
 
-  guardExisting(rnwVersion, apptype === 'mac');
   if (apptype === "both" || apptype === "cpp") {
     createNewRelease(rnwVersion, rnVersion, 'cpp');
   }
