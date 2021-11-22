@@ -1,0 +1,394 @@
+diff --git a/RnDiffApp/.flowconfig b/RnDiffApp/.flowconfig
+index 7c3a4c6ae..4320b7070 100644
+--- a/RnDiffApp/.flowconfig
++++ b/RnDiffApp/.flowconfig
+@@ -25,6 +25,8 @@ emoji=true
+ 
+ exact_by_default=true
+ 
++format.bracket_spacing=false
++
+ module.file_ext=.js
+ module.file_ext=.json
+ module.file_ext=.ios.js
+@@ -60,4 +62,4 @@ untyped-import
+ untyped-type-import
+ 
+ [version]
+-^0.149.0
++^0.158.0
+diff --git a/RnDiffApp/.gitignore b/RnDiffApp/.gitignore
+index ad572e632..cc53454ef 100644
+--- a/RnDiffApp/.gitignore
++++ b/RnDiffApp/.gitignore
+@@ -28,6 +28,7 @@ build/
+ .gradle
+ local.properties
+ *.iml
++*.hprof
+ 
+ # node.js
+ #
+diff --git a/RnDiffApp/android/app/build.gradle b/RnDiffApp/android/app/build.gradle
+index 93df06e63..c6d61c164 100644
+--- a/RnDiffApp/android/app/build.gradle
++++ b/RnDiffApp/android/app/build.gradle
+@@ -120,6 +120,11 @@ def jscFlavor = 'org.webkit:android-jsc:+'
+  */
+ def enableHermes = project.ext.react.get("enableHermes", false);
+ 
++/**
++ * Architectures to build native code for in debug.
++ */
++def nativeArchitectures = project.getProperties().get("reactNativeDebugArchitectures")
++
+ android {
+     ndkVersion rootProject.ext.ndkVersion
+ 
+@@ -151,6 +156,11 @@ android {
+     buildTypes {
+         debug {
+             signingConfig signingConfigs.debug
++            if (nativeArchitectures) {
++                ndk {
++                    abiFilters nativeArchitectures.split(',')
++                }
++            }
+         }
+         release {
+             // Caution! In production, you need to generate your own keystore file.
+@@ -186,7 +196,7 @@ dependencies {
+     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"
+ 
+     debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}") {
+-      exclude group:'com.facebook.fbjni'
++        exclude group:'com.facebook.fbjni'
+     }
+ 
+     debugImplementation("com.facebook.flipper:flipper-network-plugin:${FLIPPER_VERSION}") {
+diff --git a/RnDiffApp/android/app/src/main/res/values/styles.xml b/RnDiffApp/android/app/src/main/res/values/styles.xml
+index 9fab0be74..24bc06136 100644
+--- a/RnDiffApp/android/app/src/main/res/values/styles.xml
++++ b/RnDiffApp/android/app/src/main/res/values/styles.xml
+@@ -3,7 +3,6 @@
+     <!-- Base application theme. -->
+     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+         <!-- Customize your theme here. -->
+-        <item name="android:textColor">#000000</item>
+     </style>
+ 
+ </resources>
+diff --git a/RnDiffApp/android/build.gradle b/RnDiffApp/android/build.gradle
+index e64d31e5f..650989507 100644
+--- a/RnDiffApp/android/build.gradle
++++ b/RnDiffApp/android/build.gradle
+@@ -6,14 +6,14 @@ buildscript {
+         minSdkVersion = 21
+         compileSdkVersion = 30
+         targetSdkVersion = 30
+-        ndkVersion = "20.1.5948944"
++        ndkVersion = "21.4.7075529"
+     }
+     repositories {
+         google()
+         mavenCentral()
+     }
+     dependencies {
+-        classpath("com.android.tools.build:gradle:4.2.1")
++        classpath("com.android.tools.build:gradle:4.2.2")
+         // NOTE: Do not place your application dependencies here; they belong
+         // in the individual module build.gradle files
+     }
+diff --git a/RnDiffApp/android/gradle.properties b/RnDiffApp/android/gradle.properties
+index dbcbe6f20..cdb4c2110 100644
+--- a/RnDiffApp/android/gradle.properties
++++ b/RnDiffApp/android/gradle.properties
+@@ -25,4 +25,4 @@ android.useAndroidX=true
+ android.enableJetifier=true
+ 
+ # Version of flipper SDK to use with React Native
+-FLIPPER_VERSION=0.93.0
++FLIPPER_VERSION=0.99.0
+diff --git a/RnDiffApp/ios/Podfile b/RnDiffApp/ios/Podfile
+index 65d5ffcbf..849752182 100644
+--- a/RnDiffApp/ios/Podfile
++++ b/RnDiffApp/ios/Podfile
+@@ -3,7 +3,7 @@ require_relative '../node_modules/@react-native-community/cli-platform-ios/nativ
+ 
+ platform :ios, '11.0'
+ 
+-target 'HelloWorld' do
++target 'RnDiffApp' do
+   config = use_native_modules!
+ 
+   use_react_native!(
+@@ -12,7 +12,7 @@ target 'HelloWorld' do
+     :hermes_enabled => false
+   )
+ 
+-  target 'HelloWorldTests' do
++  target 'RnDiffAppTests' do
+     inherit! :complete
+     # Pods for testing
+   end
+@@ -25,5 +25,6 @@ target 'HelloWorld' do
+ 
+   post_install do |installer|
+     react_native_post_install(installer)
++    __apply_Xcode_12_5_M1_post_install_workaround(installer)
+   end
+ end
+diff --git a/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj b/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
+index 6fa70c5c9..e459f23e1 100644
+--- a/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
++++ b/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
+@@ -435,6 +435,7 @@
+ 					"$(inherited)",
+ 				);
+ 				LIBRARY_SEARCH_PATHS = (
++					"\"$(SDKROOT)/usr/lib/swift\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)\"",
+ 					"\"$(inherited)\"",
+@@ -492,6 +493,7 @@
+ 					"$(inherited)",
+ 				);
+ 				LIBRARY_SEARCH_PATHS = (
++					"\"$(SDKROOT)/usr/lib/swift\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)\"",
+ 					"\"$(inherited)\"",
+diff --git a/RnDiffApp/metro.config.js b/RnDiffApp/metro.config.js
+index fd816dfa8..abc20133a 100644
+--- a/RnDiffApp/metro.config.js
++++ b/RnDiffApp/metro.config.js
+@@ -4,9 +4,14 @@
+  *
+  * @format
+  */
++const fs = require('fs');
+ const path = require('path');
+ const exclusionList = require('metro-config/src/defaults/exclusionList');
+ 
++const rnwPath = fs.realpathSync(
++  path.resolve(require.resolve('react-native-windows/package.json'), '..'),
++);
++
+ module.exports = {
+   resolver: {
+     blockList: exclusionList([
+@@ -14,7 +19,9 @@ module.exports = {
+       new RegExp(
+         `${path.resolve(__dirname, 'windows').replace(/[/\\]/g, '/')}.*`,
+       ),
+-      // This prevents "react-native run-windows" from hitting: EBUSY: resource busy or locked, open msbuild.ProjectImports.zip
++      // This prevents "react-native run-windows" from hitting: EBUSY: resource busy or locked, open msbuild.ProjectImports.zip or other files produced by msbuild
++      new RegExp(`${rnwPath}/build/.*`),
++      new RegExp(`${rnwPath}/target/.*`),
+       /.*\.ProjectImports\.zip/,
+     ]),
+   },
+diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
+index 250fe9847..d5d687191 100644
+--- a/RnDiffApp/package.json
++++ b/RnDiffApp/package.json
+@@ -12,8 +12,8 @@
+   },
+   "dependencies": {
+     "react": "17.0.2",
+-    "react-native": "0.65.1",
+-    "react-native-windows": "0.65.7"
++    "react-native": "0.66.3",
++    "react-native-windows": "0.66.5"
+   },
+   "devDependencies": {
+     "@babel/core": "^7.12.9",
+@@ -22,9 +22,9 @@
+     "babel-jest": "^26.6.3",
+     "eslint": "7.14.0",
+     "jest": "^26.6.3",
+-    "metro-react-native-babel-preset": "^0.66.0",
+-    "react-native-codegen": "^0.0.7",
+-    "react-test-renderer": "17.0.2"
++    "metro-react-native-babel-preset": "^0.66.2",
++    "react-test-renderer": "17.0.2",
++    "metro-config": "^0.66.2"
+   },
+   "jest": {
+     "preset": "react-native"
+diff --git a/RnDiffApp/windows/ExperimentalFeatures.props b/RnDiffApp/windows/ExperimentalFeatures.props
+index eb7c59f86..3cfbdc5a4 100644
+--- a/RnDiffApp/windows/ExperimentalFeatures.props
++++ b/RnDiffApp/windows/ExperimentalFeatures.props
+@@ -1,8 +1,14 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+ 
++  <!--
++    This file contains some important settings that will apply globally for
++    your app and *all* native modules your app consumes. These values were
++    set when you created the app project, and in some cases cannot be
++    simply changed here without recreating a new project.
++  -->
++
+   <PropertyGroup Label="Microsoft.ReactNative Experimental Features">
+-    
+     <!--
+       Enables default usage of Hermes.
+       
+@@ -17,6 +23,15 @@
+       See https://microsoft.github.io/react-native-windows/docs/winui3
+     -->
+     <UseWinUI3>false</UseWinUI3>
++
++    <!--
++      Changes compilation to assume use of Microsoft.ReactNative NuGet packages
++      instead of building the framework from source.
++      Requires creation of new project.
++
++      See https://microsoft.github.io/react-native-windows/docs/nuget
++    -->
++    <UseExperimentalNuget>false</UseExperimentalNuget>
+   
+   </PropertyGroup>
+ 
+diff --git a/RnDiffApp/windows/rndiffapp/App.xaml.cs b/RnDiffApp/windows/rndiffapp/App.xaml.cs
+index 540d867f8..24317fb1c 100644
+--- a/RnDiffApp/windows/rndiffapp/App.xaml.cs
++++ b/RnDiffApp/windows/rndiffapp/App.xaml.cs
+@@ -32,7 +32,6 @@ namespace rndiffapp
+ 
+             Microsoft.ReactNative.Managed.AutolinkedNativeModules.RegisterAutolinkedNativeModulePackages(PackageProviders); // Includes any autolinked modules
+ 
+-            PackageProviders.Add(new Microsoft.ReactNative.Managed.ReactPackageProvider());
+             PackageProviders.Add(new ReactPackageProvider());
+ 
+             InitializeComponent();
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp.csproj b/RnDiffApp/windows/rndiffapp/rndiffapp.csproj
+index 1677cd5b3..d0464eeb6 100644
+--- a/RnDiffApp/windows/rndiffapp/rndiffapp.csproj
++++ b/RnDiffApp/windows/rndiffapp/rndiffapp.csproj
+@@ -1,5 +1,5 @@
+ ﻿<?xml version="1.0" encoding="utf-8"?>
+-<Project ToolsVersion="16.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++<Project ToolsVersion="Current" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+   <Import Project="$(SolutionDir)\ExperimentalFeatures.props" Condition="Exists('$(SolutionDir)\ExperimentalFeatures.props')" />
+   <PropertyGroup Label="ReactNativeWindowsProps">
+@@ -15,7 +15,7 @@
+     <AssemblyName>rndiffapp</AssemblyName>
+     <DefaultLanguage>en-US</DefaultLanguage>
+     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
+-    <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.18362.0</TargetPlatformVersion>
++    <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.19041.0</TargetPlatformVersion>
+     <TargetPlatformMinVersion>10.0.16299.0</TargetPlatformMinVersion>
+     <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
+     <FileAlignment>512</FileAlignment>
+@@ -164,7 +164,7 @@
+       <Version>6.2.9</Version>
+     </PackageReference>
+     <PackageReference Include="ReactNative.Hermes.Windows">
+-      <Version>0.8.0-ms.0</Version>
++      <Version>0.9.0-ms.4</Version>
+     </PackageReference>
+   </ItemGroup>
+   <ImportGroup Label="ReactNativeWindowsTargets">
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp_TemporaryKey.pfx b/RnDiffApp/windows/rndiffapp/rndiffapp_TemporaryKey.pfx
+index 9e4c89260b489efd6b9cd2e327f1d34597318530..920941b9c720db0907f1d7655b6421dfb83be41b 100644
+GIT binary patch
+delta 2355
+zcmV-33C#Ak6t)zQXn!<0lvDR6s=NXM2haq91lT}oaCd-FCHSghAn17EwA?u!*mqh}
+z<1c-4caJ*&|6a32s&eK+Ja(rCm1TBZ?xY!agC+$MmL>3GvwA0aQzyIyEi<2LJWPNi
+zfb(VmsnL60F_-RUe<RPty4Wd2UGZ7pyd_~}=tjkLDt#J!=YKTE{M3|Tggf-yc8`c4
+z29~|Q2$PTv4?YK)GFXC*&#=u*s{+zNDV0>1(>FghhBo<k+`<^X(32)g7`PiC+C6^0
+zQ9`(G$8BMR>cd9Gx@#4*FdRB<d=Mx;D0);j*s4}{@GeC;XKih2Ty^M=epMBahB1K@
+z#V0evmz^8~>VLY7D}iPqyAl^@08N;B*i;Hv^pjfKpz8v2RfuL;bdGn7S>#@>v{Lb7
+zMoB<lRugGTjH}r8Up$2J55?oPD53Y^)}C4P)diS#&!9i_JMtDCWcc8>axvUVp}(-N
+zBm))T8$EHN@56xG1R`v+xwrL~KX*!np=+ilP=u_zgMa?Z_EIhCVV8QPjWwwP-5?xs
+zrGOmUbHS%V7Ni1@kjxNm1iXi`aP=b`j+ClO6#E32ujo6RHe6C*kl`_}2jmLKNolcG
+zG8jSxu42LOcB55G7p#g2KQ62$<tWPrVACmvjAnouo|Yo+>V4l`Gpa*$fg<|LA902P
+z4g)T!A%6|uEw(Uya8&(yI`ek2!)=gk)z2sJtIIzx!Tufw!^@~ChmyH`PtGpt@T+Mf
+zHaJ_$`CD_4N3ypo+FZ)JO-$_DCA>JC@Hf0Ff|Mqtsz|s7^Io9$sa8k*Cg+dh{Krd<
+z{Hu}5fZXh`MQH-?H8=`Z6Prh0g}kP&m|!s2cYl@b%{D^-BB??xoFUU+EZ^yCW*!qO
+zx4~^f)y~#IGnhFB7#w_KPVX$WrDMy}?3~P&?C8+<n6fl2!#R@ttH8iUCvf<oiJ$%q
+zf$l3@8lYI#lhpDPzqEMw?AagN*xx1rWQaaZ<tA3fdHM1oem!yg`Gi)s0>FZ&RrN3f
+z|9@sAP6nMkK)FxBb09lh90@#70X*UTD){27gpPmOHV-zen+nLJdt<Ad(6H?#?ziD9
+z?0%*$JP4twfWDZTELYxz4GbSLFm<}ugi@YaZ|nG6DvP>>Jg5DPkF%z!Zj&>Q%)*2J
+zhY7t-(%Zp-L*@=9s2};X)BE`J)~%>zBY&_R#n!cLZ-B?__^;VnJ$<1QALpA_dLm_K
+z)s74JU7ySy4?HA90k8XSfeYHKykmBW<JBtQeAO6TY+%&<N%PZBThuY3`)@3WuF_+<
+z_I7)rfX;PVug$~H%8(oi1$TL-Mlhqf1z$&aO|yYva@?>UdRfS-5aAy+7Un_1w||R<
+z1OwPfwu@MdUFB2C&<o3RZ~-kla#CsKl);>zA9RyO?+yZB%6oetTpD<Kn}^?xpV@s`
+zP43CPGq%DU-%={*@--pbIb}u0R~q{=nvVAtwIz=}p0afRY9Ss}b?73gc=l>oZ-NW(
+zP8K@?4=51$94E$}k;OIgrWB67zkgDW;aMy(q^7B&*~Z%!Ow|Cz%!X%Hr?jAOn4jv!
+zm3#NCgc;H5X-kr2JnGbqn|m294eUIp+GXa_<up|~;~Mchjd-Ko%UO(mae`6*PIqan
+z!_ix*xO&6h+|co0X;X82{euNxX0sh&A-w^|Q;KvkfzvP(1_>&LNQU<f0h3+@B1bm>
+zHUKsNHvl#OW&k(<GXO0BH~=>QGypaLEdVqCH2^jMG5{?AVgP0UFaR?EEdXW!VgN7z
+zWdJh(G5|0DGyq}%W&kk&H<QN&ntw#`$=9_2mrMcz2hf0m1Bm^~6OdNZ_Rfhf(~(2M
+zsF;v6x%4<1xm_|h7cDmN^}@23EnMo!3D<yXHllwp(1?s(i80|h0~MmKy_C?}uxI+X
+zMS7}j^F~b&c1g!_BSglm6%;3qy%~~xj%w;j8=L>WyVk@}A?xF61jV8m(|>0mH@TY)
+zfVxQReY_(5{NxP!`ALDun(tRAfT#xakezL?T0tmo1&oVtew?OhJg68riJ%be8gJPq
+z3~uz}asnY7sZU7$t7cYs!@={J>-_`1H_Wg)ow=d?Cc@TDDFlVirIrMA50KCb%a!ni
+zt9yk<n?XVbQdJNpUOaoN_<xDxUP3der^gmX>WnF;`<HyF|8&{suR9-i>cTw%gccSg
+zkinO7Dr3}A0cT8;bP3{lkiCZ;K}ZoXQ!hiB%EJ>!*MW`JEs#ou3ENR;hi~%WCg$=h
+zQ-=fsJu^Y_rS?FAQ8TTzZHB5|E|6H%Pkj%~och~S^%w=7?zZwsrGICJiCRbhMy!Kl
+z#v~S;n#|0_IT_X<$wPz=jg_QhE|PR6qg>s2^2W|5YU6MC?UxaT;GL5lEd^0AC*>Nj
+zMdHj-svI|urrq%~tUE?T2m!!yLV~|-xxwq(FmXN)YQY{|3Re)$wL?YwF1>{)AqMY~
+z;)rr@?Z6^h=sMuRPJiz~r=n87#+Y&hhOyGaBhWq(M2zXnaIu<Pu`~lZ5O7~&2$eZW
+zdDw0R`=?J{vcRxPilbJ>7O6%;o6|1ogh2|uGb|qEqxF8Q#r}g~3TRBnN*aL5z8@r+
+zQf!QW<0ELtZX4Ea?(Gt3w6R)d(gdVa_x76b5PJ%V7AjZkM}P6M%aa)`g|z4=c*9d7
+zu*HRN$5w$uD<&nG&Q*o^yh;m8RU_@!u@ShRscd|>H(jt&DPj`QTh8jhn65^$$K&In
+zcMCa~FZ^C9!rW!UW42QH@{#TcbDzfA?i9=^%9jM824<yv_=2;p{S>UdCyhq8)cXd5
+z!8iF~-Oz&JAb<0T>%hK**}~5Mrc>gt;_->1p8Rso$E%DTGhO5{<g|)}JG&M=G~($O
+z_dsgRqo@jFslsRe%BdfsCW2ib>ay1>${X|)2C_2{uoPTFSx6)b`t@nmjZsEm)=?v5
+zx_O1aK<I5xfOePB8k6dT*xhE=HD8Och@GYO;a2ps3|vve{7?R_IVIP@?U1|zO;m0a
+zgcrv3LS{7uAoqtS<}f=jA20_71uG5%0vZGqBmT}rn=@#8oO`j<{on_WE4T>21QZ0v
+ZJm8%UD|}+T9Xp&FdeD98#JU0k2hd%*a}odm
+
+delta 2355
+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
+Z@mk33PP9=p!iigqUp&V9E(HPt2hj8qPK^Kn
+
