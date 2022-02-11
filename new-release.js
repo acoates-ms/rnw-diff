@@ -52,17 +52,17 @@ function createNewRelease(newRelease, rnVersion, apptype) {
   runCmd(`git checkout -b "${branchName}"`, wtAppPath);
 
   runCmd(
-    `npx react-native init "${appName}" --template react-native@${rnVersion}`,
+    `npx --yes react-native init "${appName}" --template react-native@${rnVersion}`,
     wtAppPath
   );
   if (apptype === "mac") {
     runCmd(
-      `npx react-native-macos-init --version ${newRelease} --overwrite`,
+      `npx --yes react-native-macos-init --version ${newRelease} --overwrite`,
       appDir
     );
   } else {
     runCmd(
-      `npx react-native-windows-init --version ${newRelease} --overwrite --language ${apptype}`,
+      `npx --yes react-native-windows-init --version ${newRelease} --overwrite --language ${apptype}`,
       appDir
     );
     // Modify some files to prevent new guids being generated and showing up in the diffs
