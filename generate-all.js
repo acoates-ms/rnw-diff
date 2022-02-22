@@ -1,6 +1,8 @@
 // @ts-check
 
 const { execSync } = require("child_process");
+const { join } = require("path");
+const { existsSync } = require("fs");
 
 function run() {
   const cmd = "npm info react-native-windows versions --json";
@@ -19,6 +21,10 @@ function run() {
       console.log("Running: " + newReleaseCmd);
       execSync(newReleaseCmd, { stdio: "inherit" });
     }
+  }
+  if (existsSync(join(__dirname, "wt-diff"))) {
+    execSync(`rmdir /S /Q wt-diff`, { cwd: __dirname, stdio: "inherit" });
+    execSync(`git worktree prune`, { cwd: __dirname, stdio: "inherit" });
   }
 }
 
