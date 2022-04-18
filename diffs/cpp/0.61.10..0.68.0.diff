@@ -336,7 +336,7 @@ index 000000000..2c3edcf4b
 +gem 'cocoapods', '~> 1.11', '>= 1.11.2'
 diff --git a/RnDiffApp/Gemfile.lock b/RnDiffApp/Gemfile.lock
 new file mode 100644
-index 000000000..089d06d0f
+index 000000000..562835193
 --- /dev/null
 +++ b/RnDiffApp/Gemfile.lock
 @@ -0,0 +1,100 @@
@@ -387,7 +387,7 @@ index 000000000..089d06d0f
 +      public_suffix (~> 4.0)
 +      typhoeus (~> 1.0)
 +    cocoapods-deintegrate (1.0.5)
-+    cocoapods-downloader (1.6.2)
++    cocoapods-downloader (1.6.3)
 +    cocoapods-plugins (1.0.0)
 +      nap
 +    cocoapods-search (1.0.1)
@@ -413,7 +413,7 @@ index 000000000..089d06d0f
 +    nanaimo (0.3.0)
 +    nap (1.1.0)
 +    netrc (0.11.0)
-+    public_suffix (4.0.6)
++    public_suffix (4.0.7)
 +    rexml (3.2.5)
 +    ruby-macho (2.5.1)
 +    typhoeus (1.4.0)
@@ -441,10 +441,18 @@ index 000000000..089d06d0f
 +BUNDLED WITH
 +   2.2.27
 diff --git a/RnDiffApp/android/app/build.gradle b/RnDiffApp/android/app/build.gradle
-index 978da91bd..ed1f54271 100644
+index 978da91bd..8d23018b9 100644
 --- a/RnDiffApp/android/app/build.gradle
 +++ b/RnDiffApp/android/app/build.gradle
-@@ -15,10 +15,12 @@ import com.android.build.OutputFile
+@@ -1,6 +1,7 @@
+ apply plugin: "com.android.application"
+ 
+ import com.android.build.OutputFile
++import org.apache.tools.ant.taskdefs.condition.Os
+ 
+ /**
+  * The react.gradle file registers a task for each build variant (e.g. bundleDebugJsAndAssets
+@@ -15,10 +16,12 @@ import com.android.build.OutputFile
   *   // the name of the generated asset file containing your JS bundle
   *   bundleAssetName: "index.android.bundle",
   *
@@ -459,7 +467,7 @@ index 978da91bd..ed1f54271 100644
   *   bundleCommand: "ram-bundle",
   *
   *   // whether to bundle JS and assets in debug mode
-@@ -76,7 +78,6 @@ import com.android.build.OutputFile
+@@ -76,7 +79,6 @@ import com.android.build.OutputFile
   */
  
  project.ext.react = [
@@ -467,7 +475,7 @@ index 978da91bd..ed1f54271 100644
      enableHermes: false,  // clean and rebuild if changing
  ]
  
-@@ -113,19 +114,24 @@ def jscFlavor = 'org.webkit:android-jsc:+'
+@@ -113,19 +115,24 @@ def jscFlavor = 'org.webkit:android-jsc:+'
  /**
   * Whether to enable the Hermes VM.
   *
@@ -498,7 +506,7 @@ index 978da91bd..ed1f54271 100644
  
      defaultConfig {
          applicationId "com.rndiffapp"
-@@ -133,13 +139,76 @@ android {
+@@ -133,13 +140,87 @@ android {
          targetSdkVersion rootProject.ext.targetSdkVersion
          versionCode 1
          versionName "1.0"
@@ -520,6 +528,17 @@ index 978da91bd..ed1f54271 100644
 +                    // Make sure this target name is the same you specify inside the
 +                    // src/main/jni/Android.mk file for the `LOCAL_MODULE` variable.
 +                    targets "rndiffapp_appmodules"
++
++                    // Fix for windows limit on number of character in file paths and in command lines
++                    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
++                        arguments "NDK_OUT=${rootProject.projectDir.getParent()}\\.cxx",
++                            "NDK_APP_SHORT_COMMANDS=true"
++                    }
++                }
++            }
++            if (!enableSeparateBuildPerCPUArchitecture) {
++                ndk {
++                    abiFilters (*reactNativeArchitectures())
 +                }
 +            }
 +        }
@@ -576,7 +595,7 @@ index 978da91bd..ed1f54271 100644
          }
      }
      signingConfigs {
-@@ -156,22 +225,24 @@ android {
+@@ -156,22 +237,24 @@ android {
          }
          release {
              // Caution! In production, you need to generate your own keystore file.
@@ -603,7 +622,7 @@ index 978da91bd..ed1f54271 100644
              }
  
          }
-@@ -180,8 +251,25 @@ android {
+@@ -180,8 +263,25 @@ android {
  
  dependencies {
      implementation fileTree(dir: "libs", include: ["*.jar"])
@@ -629,7 +648,7 @@ index 978da91bd..ed1f54271 100644
      if (enableHermes) {
          def hermesPath = "../../node_modules/hermes-engine/android/";
          debugImplementation files(hermesPath + "hermes-debug.aar")
-@@ -191,11 +279,31 @@ dependencies {
+@@ -191,11 +291,31 @@ dependencies {
      }
  }
  
@@ -1492,10 +1511,13 @@ index 62fe59fa4..7ba83a2ad 100644
  
  </resources>
 diff --git a/RnDiffApp/android/build.gradle b/RnDiffApp/android/build.gradle
-index 28f7ec645..8a1d68f9c 100644
+index 28f7ec645..e7156fcc9 100644
 --- a/RnDiffApp/android/build.gradle
 +++ b/RnDiffApp/android/build.gradle
-@@ -2,18 +2,20 @@
+@@ -1,19 +1,34 @@
++import org.apache.tools.ant.taskdefs.condition.Os
++
+ // Top-level build file where you can add configuration options common to all sub-projects/modules.
  
  buildscript {
      ext {
@@ -1507,7 +1529,18 @@ index 28f7ec645..8a1d68f9c 100644
 +        minSdkVersion = 21
 +        compileSdkVersion = 31
 +        targetSdkVersion = 31
-+        ndkVersion = "21.4.7075529"
++
++        if (System.properties['os.arch'] == "aarch64") {
++            // For M1 Users we need to use the NDK 24 which added support for aarch64
++            ndkVersion = "24.0.8215888"
++        } else if (Os.isFamily(Os.FAMILY_WINDOWS)) {
++            // For Android Users, we need to use NDK 23, otherwise the build will
++            // fail due to paths longer than the OS limit
++            ndkVersion = "23.1.7779620"
++        } else {
++            // Otherwise we default to the side-by-side NDK version from AGP.
++            ndkVersion = "21.4.7075529"
++        }
      }
      repositories {
          google()
@@ -1523,7 +1556,7 @@ index 28f7ec645..8a1d68f9c 100644
          // NOTE: Do not place your application dependencies here; they belong
          // in the individual module build.gradle files
      }
-@@ -21,7 +23,6 @@ buildscript {
+@@ -21,7 +36,6 @@ buildscript {
  
  allprojects {
      repositories {
@@ -1531,7 +1564,7 @@ index 28f7ec645..8a1d68f9c 100644
          maven {
              // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
              url("$rootDir/../node_modules/react-native/android")
-@@ -30,9 +31,14 @@ allprojects {
+@@ -30,9 +44,14 @@ allprojects {
              // Android JSC is installed from npm
              url("$rootDir/../node_modules/jsc-android/dist")
          }
@@ -4564,7 +4597,7 @@ index 2ed937d53..abc20133a 100644
      }),
    },
 diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
-index b4631f04d..b7caf3eab 100644
+index b4631f04d..18c43c7a1 100644
 --- a/RnDiffApp/package.json
 +++ b/RnDiffApp/package.json
 @@ -1,28 +1,32 @@
@@ -4587,7 +4620,7 @@ index b4631f04d..b7caf3eab 100644
 -    "react-native": "0.61.5",
 -    "react-native-windows": "0.61.10"
 +    "react": "17.0.2",
-+    "react-native": "0.68.0",
++    "react-native": "0.68.1",
 +    "react-native-windows": "0.68.0"
    },
    "devDependencies": {

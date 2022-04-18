@@ -307,7 +307,7 @@ index 000000000..2c3edcf4b
 +gem 'cocoapods', '~> 1.11', '>= 1.11.2'
 diff --git a/RnDiffApp/Gemfile.lock b/RnDiffApp/Gemfile.lock
 new file mode 100644
-index 000000000..089d06d0f
+index 000000000..562835193
 --- /dev/null
 +++ b/RnDiffApp/Gemfile.lock
 @@ -0,0 +1,100 @@
@@ -358,7 +358,7 @@ index 000000000..089d06d0f
 +      public_suffix (~> 4.0)
 +      typhoeus (~> 1.0)
 +    cocoapods-deintegrate (1.0.5)
-+    cocoapods-downloader (1.6.2)
++    cocoapods-downloader (1.6.3)
 +    cocoapods-plugins (1.0.0)
 +      nap
 +    cocoapods-search (1.0.1)
@@ -384,7 +384,7 @@ index 000000000..089d06d0f
 +    nanaimo (0.3.0)
 +    nap (1.1.0)
 +    netrc (0.11.0)
-+    public_suffix (4.0.6)
++    public_suffix (4.0.7)
 +    rexml (3.2.5)
 +    ruby-macho (2.5.1)
 +    typhoeus (1.4.0)
@@ -412,10 +412,18 @@ index 000000000..089d06d0f
 +BUNDLED WITH
 +   2.2.27
 diff --git a/RnDiffApp/android/app/build.gradle b/RnDiffApp/android/app/build.gradle
-index ae67f6005..ed1f54271 100644
+index ae67f6005..8d23018b9 100644
 --- a/RnDiffApp/android/app/build.gradle
 +++ b/RnDiffApp/android/app/build.gradle
-@@ -20,7 +20,7 @@ import com.android.build.OutputFile
+@@ -1,6 +1,7 @@
+ apply plugin: "com.android.application"
+ 
+ import com.android.build.OutputFile
++import org.apache.tools.ant.taskdefs.condition.Os
+ 
+ /**
+  * The react.gradle file registers a task for each build variant (e.g. bundleDebugJsAndAssets
+@@ -20,7 +21,7 @@ import com.android.build.OutputFile
   *   // default. Can be overridden with ENTRY_FILE environment variable.
   *   entryFile: "index.android.js",
   *
@@ -424,7 +432,7 @@ index ae67f6005..ed1f54271 100644
   *   bundleCommand: "ram-bundle",
   *
   *   // whether to bundle JS and assets in debug mode
-@@ -114,19 +114,24 @@ def jscFlavor = 'org.webkit:android-jsc:+'
+@@ -114,19 +115,24 @@ def jscFlavor = 'org.webkit:android-jsc:+'
  /**
   * Whether to enable the Hermes VM.
   *
@@ -455,7 +463,7 @@ index ae67f6005..ed1f54271 100644
  
      defaultConfig {
          applicationId "com.rndiffapp"
-@@ -134,13 +139,76 @@ android {
+@@ -134,13 +140,87 @@ android {
          targetSdkVersion rootProject.ext.targetSdkVersion
          versionCode 1
          versionName "1.0"
@@ -477,6 +485,17 @@ index ae67f6005..ed1f54271 100644
 +                    // Make sure this target name is the same you specify inside the
 +                    // src/main/jni/Android.mk file for the `LOCAL_MODULE` variable.
 +                    targets "rndiffapp_appmodules"
++
++                    // Fix for windows limit on number of character in file paths and in command lines
++                    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
++                        arguments "NDK_OUT=${rootProject.projectDir.getParent()}\\.cxx",
++                            "NDK_APP_SHORT_COMMANDS=true"
++                    }
++                }
++            }
++            if (!enableSeparateBuildPerCPUArchitecture) {
++                ndk {
++                    abiFilters (*reactNativeArchitectures())
 +                }
 +            }
 +        }
@@ -533,7 +552,7 @@ index ae67f6005..ed1f54271 100644
          }
      }
      signingConfigs {
-@@ -157,30 +225,24 @@ android {
+@@ -157,30 +237,24 @@ android {
          }
          release {
              // Caution! In production, you need to generate your own keystore file.
@@ -567,7 +586,7 @@ index ae67f6005..ed1f54271 100644
              }
  
          }
-@@ -189,17 +251,19 @@ android {
+@@ -189,17 +263,19 @@ android {
  
  dependencies {
      implementation fileTree(dir: "libs", include: ["*.jar"])
@@ -588,7 +607,7 @@ index ae67f6005..ed1f54271 100644
      }
  
      debugImplementation("com.facebook.flipper:flipper-fresco-plugin:${FLIPPER_VERSION}") {
-@@ -215,11 +279,31 @@ dependencies {
+@@ -215,11 +291,31 @@ dependencies {
      }
  }
  
@@ -1369,10 +1388,13 @@ index 62fe59fa4..7ba83a2ad 100644
  
  </resources>
 diff --git a/RnDiffApp/android/build.gradle b/RnDiffApp/android/build.gradle
-index 5d5d188b3..8a1d68f9c 100644
+index 5d5d188b3..e7156fcc9 100644
 --- a/RnDiffApp/android/build.gradle
 +++ b/RnDiffApp/android/build.gradle
-@@ -2,18 +2,20 @@
+@@ -1,19 +1,34 @@
++import org.apache.tools.ant.taskdefs.condition.Os
++
+ // Top-level build file where you can add configuration options common to all sub-projects/modules.
  
  buildscript {
      ext {
@@ -1384,7 +1406,18 @@ index 5d5d188b3..8a1d68f9c 100644
 +        minSdkVersion = 21
 +        compileSdkVersion = 31
 +        targetSdkVersion = 31
-+        ndkVersion = "21.4.7075529"
++
++        if (System.properties['os.arch'] == "aarch64") {
++            // For M1 Users we need to use the NDK 24 which added support for aarch64
++            ndkVersion = "24.0.8215888"
++        } else if (Os.isFamily(Os.FAMILY_WINDOWS)) {
++            // For Android Users, we need to use NDK 23, otherwise the build will
++            // fail due to paths longer than the OS limit
++            ndkVersion = "23.1.7779620"
++        } else {
++            // Otherwise we default to the side-by-side NDK version from AGP.
++            ndkVersion = "21.4.7075529"
++        }
      }
      repositories {
          google()
@@ -1400,7 +1433,7 @@ index 5d5d188b3..8a1d68f9c 100644
          // NOTE: Do not place your application dependencies here; they belong
          // in the individual module build.gradle files
      }
-@@ -21,7 +23,6 @@ buildscript {
+@@ -21,7 +36,6 @@ buildscript {
  
  allprojects {
      repositories {
@@ -1408,7 +1441,7 @@ index 5d5d188b3..8a1d68f9c 100644
          maven {
              // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
              url("$rootDir/../node_modules/react-native/android")
-@@ -30,9 +31,14 @@ allprojects {
+@@ -30,9 +44,14 @@ allprojects {
              // Android JSC is installed from npm
              url("$rootDir/../node_modules/jsc-android/dist")
          }
@@ -4408,7 +4441,7 @@ index 9a167301b..abc20133a 100644
      }),
    },
 diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
-index 079a0923e..b7caf3eab 100644
+index 079a0923e..18c43c7a1 100644
 --- a/RnDiffApp/package.json
 +++ b/RnDiffApp/package.json
 @@ -1,5 +1,5 @@
@@ -4426,7 +4459,7 @@ index 079a0923e..b7caf3eab 100644
 -    "react-native": "^0.62.0-0",
 -    "react-native-windows": "0.62.12"
 +    "react": "17.0.2",
-+    "react-native": "0.68.0",
++    "react-native": "0.68.1",
 +    "react-native-windows": "0.68.0"
    },
    "devDependencies": {
