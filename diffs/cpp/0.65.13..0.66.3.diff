@@ -1,0 +1,989 @@
+diff --git a/RnDiffApp/.flowconfig b/RnDiffApp/.flowconfig
+index 7c3a4c6ae..4320b7070 100644
+--- a/RnDiffApp/.flowconfig
++++ b/RnDiffApp/.flowconfig
+@@ -25,6 +25,8 @@ emoji=true
+ 
+ exact_by_default=true
+ 
++format.bracket_spacing=false
++
+ module.file_ext=.js
+ module.file_ext=.json
+ module.file_ext=.ios.js
+@@ -60,4 +62,4 @@ untyped-import
+ untyped-type-import
+ 
+ [version]
+-^0.149.0
++^0.158.0
+diff --git a/RnDiffApp/.gitignore b/RnDiffApp/.gitignore
+index ad572e632..cc53454ef 100644
+--- a/RnDiffApp/.gitignore
++++ b/RnDiffApp/.gitignore
+@@ -28,6 +28,7 @@ build/
+ .gradle
+ local.properties
+ *.iml
++*.hprof
+ 
+ # node.js
+ #
+diff --git a/RnDiffApp/android/app/_BUCK b/RnDiffApp/android/app/_BUCK
+index 70a29f41b..0e7790483 100644
+--- a/RnDiffApp/android/app/_BUCK
++++ b/RnDiffApp/android/app/_BUCK
+@@ -35,12 +35,12 @@ android_library(
+ 
+ android_build_config(
+     name = "build_config",
+-    package = "com.rndiffapp",
++    package = "com.helloworld",
+ )
+ 
+ android_resource(
+     name = "res",
+-    package = "com.rndiffapp",
++    package = "com.helloworld",
+     res = "src/main/res",
+ )
+ 
+diff --git a/RnDiffApp/android/app/build.gradle b/RnDiffApp/android/app/build.gradle
+index 93df06e63..4e64e6a0d 100644
+--- a/RnDiffApp/android/app/build.gradle
++++ b/RnDiffApp/android/app/build.gradle
+@@ -120,13 +120,18 @@ def jscFlavor = 'org.webkit:android-jsc:+'
+  */
+ def enableHermes = project.ext.react.get("enableHermes", false);
+ 
++/**
++ * Architectures to build native code for in debug.
++ */
++def nativeArchitectures = project.getProperties().get("reactNativeDebugArchitectures")
++
+ android {
+     ndkVersion rootProject.ext.ndkVersion
+ 
+     compileSdkVersion rootProject.ext.compileSdkVersion
+ 
+     defaultConfig {
+-        applicationId "com.rndiffapp"
++        applicationId "com.helloworld"
+         minSdkVersion rootProject.ext.minSdkVersion
+         targetSdkVersion rootProject.ext.targetSdkVersion
+         versionCode 1
+@@ -151,6 +156,11 @@ android {
+     buildTypes {
+         debug {
+             signingConfig signingConfigs.debug
++            if (nativeArchitectures) {
++                ndk {
++                    abiFilters nativeArchitectures.split(',')
++                }
++            }
+         }
+         release {
+             // Caution! In production, you need to generate your own keystore file.
+@@ -186,7 +196,7 @@ dependencies {
+     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"
+ 
+     debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}") {
+-      exclude group:'com.facebook.fbjni'
++        exclude group:'com.facebook.fbjni'
+     }
+ 
+     debugImplementation("com.facebook.flipper:flipper-network-plugin:${FLIPPER_VERSION}") {
+diff --git a/RnDiffApp/android/app/src/debug/java/com/rndiffapp/ReactNativeFlipper.java b/RnDiffApp/android/app/src/debug/java/com/helloworld/ReactNativeFlipper.java
+similarity index 99%
+rename from RnDiffApp/android/app/src/debug/java/com/rndiffapp/ReactNativeFlipper.java
+rename to RnDiffApp/android/app/src/debug/java/com/helloworld/ReactNativeFlipper.java
+index 5c106db4b..8b7f0913d 100644
+--- a/RnDiffApp/android/app/src/debug/java/com/rndiffapp/ReactNativeFlipper.java
++++ b/RnDiffApp/android/app/src/debug/java/com/helloworld/ReactNativeFlipper.java
+@@ -4,7 +4,7 @@
+  * <p>This source code is licensed under the MIT license found in the LICENSE file in the root
+  * directory of this source tree.
+  */
+-package com.rndiffapp;
++package com.helloworld;
+ 
+ import android.content.Context;
+ import com.facebook.flipper.android.AndroidFlipperClient;
+diff --git a/RnDiffApp/android/app/src/main/AndroidManifest.xml b/RnDiffApp/android/app/src/main/AndroidManifest.xml
+index ad4899cc3..6db8bad36 100644
+--- a/RnDiffApp/android/app/src/main/AndroidManifest.xml
++++ b/RnDiffApp/android/app/src/main/AndroidManifest.xml
+@@ -1,5 +1,5 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+-  package="com.rndiffapp">
++  package="com.helloworld">
+ 
+     <uses-permission android:name="android.permission.INTERNET" />
+ 
+diff --git a/RnDiffApp/android/app/src/main/java/com/rndiffapp/MainActivity.java b/RnDiffApp/android/app/src/main/java/com/helloworld/MainActivity.java
+similarity index 85%
+rename from RnDiffApp/android/app/src/main/java/com/rndiffapp/MainActivity.java
+rename to RnDiffApp/android/app/src/main/java/com/helloworld/MainActivity.java
+index e325e8cf9..c7106d573 100644
+--- a/RnDiffApp/android/app/src/main/java/com/rndiffapp/MainActivity.java
++++ b/RnDiffApp/android/app/src/main/java/com/helloworld/MainActivity.java
+@@ -1,4 +1,4 @@
+-package com.rndiffapp;
++package com.helloworld;
+ 
+ import com.facebook.react.ReactActivity;
+ 
+@@ -10,6 +10,6 @@ public class MainActivity extends ReactActivity {
+    */
+   @Override
+   protected String getMainComponentName() {
+-    return "RnDiffApp";
++    return "HelloWorld";
+   }
+ }
+diff --git a/RnDiffApp/android/app/src/main/java/com/rndiffapp/MainApplication.java b/RnDiffApp/android/app/src/main/java/com/helloworld/MainApplication.java
+similarity index 96%
+rename from RnDiffApp/android/app/src/main/java/com/rndiffapp/MainApplication.java
+rename to RnDiffApp/android/app/src/main/java/com/helloworld/MainApplication.java
+index 04df56cf6..e55c37b97 100644
+--- a/RnDiffApp/android/app/src/main/java/com/rndiffapp/MainApplication.java
++++ b/RnDiffApp/android/app/src/main/java/com/helloworld/MainApplication.java
+@@ -1,4 +1,4 @@
+-package com.rndiffapp;
++package com.helloworld;
+ 
+ import android.app.Application;
+ import android.content.Context;
+@@ -62,7 +62,7 @@ public class MainApplication extends Application implements ReactApplication {
+          We use reflection here to pick up the class that initializes Flipper,
+         since Flipper library is not available in release mode
+         */
+-        Class<?> aClass = Class.forName("com.rndiffapp.ReactNativeFlipper");
++        Class<?> aClass = Class.forName("com.helloworld.ReactNativeFlipper");
+         aClass
+             .getMethod("initializeFlipper", Context.class, ReactInstanceManager.class)
+             .invoke(null, context, reactInstanceManager);
+diff --git a/RnDiffApp/android/app/src/main/res/values/strings.xml b/RnDiffApp/android/app/src/main/res/values/strings.xml
+index 890b3b408..0c79c4bad 100644
+--- a/RnDiffApp/android/app/src/main/res/values/strings.xml
++++ b/RnDiffApp/android/app/src/main/res/values/strings.xml
+@@ -1,3 +1,3 @@
+ <resources>
+-    <string name="app_name">RnDiffApp</string>
++    <string name="app_name">Hello App Display Name</string>
+ </resources>
+diff --git a/RnDiffApp/android/app/src/main/res/values/styles.xml b/RnDiffApp/android/app/src/main/res/values/styles.xml
+index 9fab0be74..24bc06136 100644
+--- a/RnDiffApp/android/app/src/main/res/values/styles.xml
++++ b/RnDiffApp/android/app/src/main/res/values/styles.xml
+@@ -3,7 +3,6 @@
+     <!-- Base application theme. -->
+     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+         <!-- Customize your theme here. -->
+-        <item name="android:textColor">#000000</item>
+     </style>
+ 
+ </resources>
+diff --git a/RnDiffApp/android/build.gradle b/RnDiffApp/android/build.gradle
+index e64d31e5f..650989507 100644
+--- a/RnDiffApp/android/build.gradle
++++ b/RnDiffApp/android/build.gradle
+@@ -6,14 +6,14 @@ buildscript {
+         minSdkVersion = 21
+         compileSdkVersion = 30
+         targetSdkVersion = 30
+-        ndkVersion = "20.1.5948944"
++        ndkVersion = "21.4.7075529"
+     }
+     repositories {
+         google()
+         mavenCentral()
+     }
+     dependencies {
+-        classpath("com.android.tools.build:gradle:4.2.1")
++        classpath("com.android.tools.build:gradle:4.2.2")
+         // NOTE: Do not place your application dependencies here; they belong
+         // in the individual module build.gradle files
+     }
+diff --git a/RnDiffApp/android/gradle.properties b/RnDiffApp/android/gradle.properties
+index dbcbe6f20..cdb4c2110 100644
+--- a/RnDiffApp/android/gradle.properties
++++ b/RnDiffApp/android/gradle.properties
+@@ -25,4 +25,4 @@ android.useAndroidX=true
+ android.enableJetifier=true
+ 
+ # Version of flipper SDK to use with React Native
+-FLIPPER_VERSION=0.93.0
++FLIPPER_VERSION=0.99.0
+diff --git a/RnDiffApp/android/settings.gradle b/RnDiffApp/android/settings.gradle
+index 73a47b2ed..e50c29d62 100644
+--- a/RnDiffApp/android/settings.gradle
++++ b/RnDiffApp/android/settings.gradle
+@@ -1,3 +1,3 @@
+-rootProject.name = 'RnDiffApp'
++rootProject.name = 'HelloWorld'
+ apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
+ include ':app'
+diff --git a/RnDiffApp/app.json b/RnDiffApp/app.json
+index 0462e26ea..114d929c1 100644
+--- a/RnDiffApp/app.json
++++ b/RnDiffApp/app.json
+@@ -1,4 +1,4 @@
+ {
+-  "name": "RnDiffApp",
+-  "displayName": "RnDiffApp"
++  "name": "HelloWorld",
++  "displayName": "HelloWorld"
+ }
+\ No newline at end of file
+diff --git a/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj b/RnDiffApp/ios/HelloWorld.xcodeproj/project.pbxproj
+similarity index 85%
+rename from RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
+rename to RnDiffApp/ios/HelloWorld.xcodeproj/project.pbxproj
+index 6fa70c5c9..fbe9f2927 100644
+--- a/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
++++ b/RnDiffApp/ios/HelloWorld.xcodeproj/project.pbxproj
+@@ -7,7 +7,7 @@
+ 	objects = {
+ 
+ /* Begin PBXBuildFile section */
+-		00E356F31AD99517003FC87E /* RnDiffAppTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* RnDiffAppTests.m */; };
++		00E356F31AD99517003FC87E /* HelloWorldTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 00E356F21AD99517003FC87E /* HelloWorldTests.m */; };
+ 		13B07FBC1A68108700A75B9A /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB01A68108700A75B9A /* AppDelegate.m */; };
+ 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+ 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
+@@ -20,21 +20,21 @@
+ 			containerPortal = 83CBB9F71A601CBA00E9B192 /* Project object */;
+ 			proxyType = 1;
+ 			remoteGlobalIDString = 13B07F861A680F5B00A75B9A;
+-			remoteInfo = RnDiffApp;
++			remoteInfo = HelloWorld;
+ 		};
+ /* End PBXContainerItemProxy section */
+ 
+ /* Begin PBXFileReference section */
+-		00E356EE1AD99517003FC87E /* RnDiffAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RnDiffAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
++		00E356EE1AD99517003FC87E /* HelloWorldTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HelloWorldTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+ 		00E356F11AD99517003FC87E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+-		00E356F21AD99517003FC87E /* RnDiffAppTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RnDiffAppTests.m; sourceTree = "<group>"; };
+-		13B07F961A680F5B00A75B9A /* RnDiffApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RnDiffApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+-		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = RnDiffApp/AppDelegate.h; sourceTree = "<group>"; };
+-		13B07FB01A68108700A75B9A /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AppDelegate.m; path = RnDiffApp/AppDelegate.m; sourceTree = "<group>"; };
+-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = RnDiffApp/Images.xcassets; sourceTree = "<group>"; };
+-		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = RnDiffApp/Info.plist; sourceTree = "<group>"; };
+-		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = RnDiffApp/main.m; sourceTree = "<group>"; };
+-		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = RnDiffApp/LaunchScreen.storyboard; sourceTree = "<group>"; };
++		00E356F21AD99517003FC87E /* HelloWorldTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = HelloWorldTests.m; sourceTree = "<group>"; };
++		13B07F961A680F5B00A75B9A /* HelloWorld.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HelloWorld.app; sourceTree = BUILT_PRODUCTS_DIR; };
++		13B07FAF1A68108700A75B9A /* AppDelegate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AppDelegate.h; path = HelloWorld/AppDelegate.h; sourceTree = "<group>"; };
++		13B07FB01A68108700A75B9A /* AppDelegate.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AppDelegate.m; path = HelloWorld/AppDelegate.m; sourceTree = "<group>"; };
++		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = HelloWorld/Images.xcassets; sourceTree = "<group>"; };
++		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = HelloWorld/Info.plist; sourceTree = "<group>"; };
++		13B07FB71A68108700A75B9A /* main.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = main.m; path = HelloWorld/main.m; sourceTree = "<group>"; };
++		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = HelloWorld/LaunchScreen.storyboard; sourceTree = "<group>"; };
+ 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+ /* End PBXFileReference section */
+ 
+@@ -56,13 +56,13 @@
+ /* End PBXFrameworksBuildPhase section */
+ 
+ /* Begin PBXGroup section */
+-		00E356EF1AD99517003FC87E /* RnDiffAppTests */ = {
++		00E356EF1AD99517003FC87E /* HelloWorldTests */ = {
+ 			isa = PBXGroup;
+ 			children = (
+-				00E356F21AD99517003FC87E /* RnDiffAppTests.m */,
++				00E356F21AD99517003FC87E /* HelloWorldTests.m */,
+ 				00E356F01AD99517003FC87E /* Supporting Files */,
+ 			);
+-			path = RnDiffAppTests;
++			path = HelloWorldTests;
+ 			sourceTree = "<group>";
+ 		};
+ 		00E356F01AD99517003FC87E /* Supporting Files */ = {
+@@ -73,7 +73,7 @@
+ 			name = "Supporting Files";
+ 			sourceTree = "<group>";
+ 		};
+-		13B07FAE1A68108700A75B9A /* RnDiffApp */ = {
++		13B07FAE1A68108700A75B9A /* HelloWorld */ = {
+ 			isa = PBXGroup;
+ 			children = (
+ 				13B07FAF1A68108700A75B9A /* AppDelegate.h */,
+@@ -83,7 +83,7 @@
+ 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
+ 				13B07FB71A68108700A75B9A /* main.m */,
+ 			);
+-			name = RnDiffApp;
++			name = HelloWorld;
+ 			sourceTree = "<group>";
+ 		};
+ 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
+@@ -104,9 +104,9 @@
+ 		83CBB9F61A601CBA00E9B192 = {
+ 			isa = PBXGroup;
+ 			children = (
+-				13B07FAE1A68108700A75B9A /* RnDiffApp */,
++				13B07FAE1A68108700A75B9A /* HelloWorld */,
+ 				832341AE1AAA6A7D00B99B32 /* Libraries */,
+-				00E356EF1AD99517003FC87E /* RnDiffAppTests */,
++				00E356EF1AD99517003FC87E /* HelloWorldTests */,
+ 				83CBBA001A601CBA00E9B192 /* Products */,
+ 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
+ 			);
+@@ -118,8 +118,8 @@
+ 		83CBBA001A601CBA00E9B192 /* Products */ = {
+ 			isa = PBXGroup;
+ 			children = (
+-				13B07F961A680F5B00A75B9A /* RnDiffApp.app */,
+-				00E356EE1AD99517003FC87E /* RnDiffAppTests.xctest */,
++				13B07F961A680F5B00A75B9A /* HelloWorld.app */,
++				00E356EE1AD99517003FC87E /* HelloWorldTests.xctest */,
+ 			);
+ 			name = Products;
+ 			sourceTree = "<group>";
+@@ -127,9 +127,9 @@
+ /* End PBXGroup section */
+ 
+ /* Begin PBXNativeTarget section */
+-		00E356ED1AD99517003FC87E /* RnDiffAppTests */ = {
++		00E356ED1AD99517003FC87E /* HelloWorldTests */ = {
+ 			isa = PBXNativeTarget;
+-			buildConfigurationList = 00E357021AD99517003FC87E /* Build configuration list for PBXNativeTarget "RnDiffAppTests" */;
++			buildConfigurationList = 00E357021AD99517003FC87E /* Build configuration list for PBXNativeTarget "HelloWorldTests" */;
+ 			buildPhases = (
+ 				00E356EA1AD99517003FC87E /* Sources */,
+ 				00E356EB1AD99517003FC87E /* Frameworks */,
+@@ -140,14 +140,14 @@
+ 			dependencies = (
+ 				00E356F51AD99517003FC87E /* PBXTargetDependency */,
+ 			);
+-			name = RnDiffAppTests;
+-			productName = RnDiffAppTests;
+-			productReference = 00E356EE1AD99517003FC87E /* RnDiffAppTests.xctest */;
++			name = HelloWorldTests;
++			productName = HelloWorldTests;
++			productReference = 00E356EE1AD99517003FC87E /* HelloWorldTests.xctest */;
+ 			productType = "com.apple.product-type.bundle.unit-test";
+ 		};
+-		13B07F861A680F5B00A75B9A /* RnDiffApp */ = {
++		13B07F861A680F5B00A75B9A /* HelloWorld */ = {
+ 			isa = PBXNativeTarget;
+-			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "RnDiffApp" */;
++			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "HelloWorld" */;
+ 			buildPhases = (
+ 				FD10A7F022414F080027D42C /* Start Packager */,
+ 				13B07F871A680F5B00A75B9A /* Sources */,
+@@ -159,9 +159,9 @@
+ 			);
+ 			dependencies = (
+ 			);
+-			name = RnDiffApp;
+-			productName = RnDiffApp;
+-			productReference = 13B07F961A680F5B00A75B9A /* RnDiffApp.app */;
++			name = HelloWorld;
++			productName = HelloWorld;
++			productReference = 13B07F961A680F5B00A75B9A /* HelloWorld.app */;
+ 			productType = "com.apple.product-type.application";
+ 		};
+ /* End PBXNativeTarget section */
+@@ -181,7 +181,7 @@
+ 					};
+ 				};
+ 			};
+-			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "RnDiffApp" */;
++			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "HelloWorld" */;
+ 			compatibilityVersion = "Xcode 12.0";
+ 			developmentRegion = en;
+ 			hasScannedForEncodings = 0;
+@@ -194,8 +194,8 @@
+ 			projectDirPath = "";
+ 			projectRoot = "";
+ 			targets = (
+-				13B07F861A680F5B00A75B9A /* RnDiffApp */,
+-				00E356ED1AD99517003FC87E /* RnDiffAppTests */,
++				13B07F861A680F5B00A75B9A /* HelloWorld */,
++				00E356ED1AD99517003FC87E /* HelloWorldTests */,
+ 			);
+ 		};
+ /* End PBXProject section */
+@@ -260,7 +260,7 @@
+ 			isa = PBXSourcesBuildPhase;
+ 			buildActionMask = 2147483647;
+ 			files = (
+-				00E356F31AD99517003FC87E /* RnDiffAppTests.m in Sources */,
++				00E356F31AD99517003FC87E /* HelloWorldTests.m in Sources */,
+ 			);
+ 			runOnlyForDeploymentPostprocessing = 0;
+ 		};
+@@ -278,7 +278,7 @@
+ /* Begin PBXTargetDependency section */
+ 		00E356F51AD99517003FC87E /* PBXTargetDependency */ = {
+ 			isa = PBXTargetDependency;
+-			target = 13B07F861A680F5B00A75B9A /* RnDiffApp */;
++			target = 13B07F861A680F5B00A75B9A /* HelloWorld */;
+ 			targetProxy = 00E356F41AD99517003FC87E /* PBXContainerItemProxy */;
+ 		};
+ /* End PBXTargetDependency section */
+@@ -292,7 +292,7 @@
+ 					"DEBUG=1",
+ 					"$(inherited)",
+ 				);
+-				INFOPLIST_FILE = RnDiffAppTests/Info.plist;
++				INFOPLIST_FILE = HelloWorldTests/Info.plist;
+ 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+@@ -306,7 +306,7 @@
+ 				);
+ 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RnDiffApp.app/RnDiffApp";
++				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HelloWorld.app/HelloWorld";
+ 			};
+ 			name = Debug;
+ 		};
+@@ -315,7 +315,7 @@
+ 			buildSettings = {
+ 				BUNDLE_LOADER = "$(TEST_HOST)";
+ 				COPY_PHASE_STRIP = NO;
+-				INFOPLIST_FILE = RnDiffAppTests/Info.plist;
++				INFOPLIST_FILE = HelloWorldTests/Info.plist;
+ 				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+@@ -329,7 +329,7 @@
+ 				);
+ 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+ 				PRODUCT_NAME = "$(TARGET_NAME)";
+-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RnDiffApp.app/RnDiffApp";
++				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/HelloWorld.app/HelloWorld";
+ 			};
+ 			name = Release;
+ 		};
+@@ -340,7 +340,7 @@
+ 				CLANG_ENABLE_MODULES = YES;
+ 				CURRENT_PROJECT_VERSION = 1;
+ 				ENABLE_BITCODE = NO;
+-				INFOPLIST_FILE = RnDiffApp/Info.plist;
++				INFOPLIST_FILE = HelloWorld/Info.plist;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+@@ -351,7 +351,7 @@
+ 					"-lc++",
+ 				);
+ 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+-				PRODUCT_NAME = RnDiffApp;
++				PRODUCT_NAME = HelloWorld;
+ 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+ 				SWIFT_VERSION = 5.0;
+ 				VERSIONING_SYSTEM = "apple-generic";
+@@ -364,7 +364,7 @@
+ 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+ 				CLANG_ENABLE_MODULES = YES;
+ 				CURRENT_PROJECT_VERSION = 1;
+-				INFOPLIST_FILE = RnDiffApp/Info.plist;
++				INFOPLIST_FILE = HelloWorld/Info.plist;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+@@ -375,7 +375,7 @@
+ 					"-lc++",
+ 				);
+ 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+-				PRODUCT_NAME = RnDiffApp;
++				PRODUCT_NAME = HelloWorld;
+ 				SWIFT_VERSION = 5.0;
+ 				VERSIONING_SYSTEM = "apple-generic";
+ 			};
+@@ -435,6 +435,7 @@
+ 					"$(inherited)",
+ 				);
+ 				LIBRARY_SEARCH_PATHS = (
++					"\"$(SDKROOT)/usr/lib/swift\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)\"",
+ 					"\"$(inherited)\"",
+@@ -492,6 +493,7 @@
+ 					"$(inherited)",
+ 				);
+ 				LIBRARY_SEARCH_PATHS = (
++					"\"$(SDKROOT)/usr/lib/swift\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)\"",
+ 					"\"$(inherited)\"",
+@@ -505,7 +507,7 @@
+ /* End XCBuildConfiguration section */
+ 
+ /* Begin XCConfigurationList section */
+-		00E357021AD99517003FC87E /* Build configuration list for PBXNativeTarget "RnDiffAppTests" */ = {
++		00E357021AD99517003FC87E /* Build configuration list for PBXNativeTarget "HelloWorldTests" */ = {
+ 			isa = XCConfigurationList;
+ 			buildConfigurations = (
+ 				00E356F61AD99517003FC87E /* Debug */,
+@@ -514,7 +516,7 @@
+ 			defaultConfigurationIsVisible = 0;
+ 			defaultConfigurationName = Release;
+ 		};
+-		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "RnDiffApp" */ = {
++		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "HelloWorld" */ = {
+ 			isa = XCConfigurationList;
+ 			buildConfigurations = (
+ 				13B07F941A680F5B00A75B9A /* Debug */,
+@@ -523,7 +525,7 @@
+ 			defaultConfigurationIsVisible = 0;
+ 			defaultConfigurationName = Release;
+ 		};
+-		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "RnDiffApp" */ = {
++		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "HelloWorld" */ = {
+ 			isa = XCConfigurationList;
+ 			buildConfigurations = (
+ 				83CBBA201A601CBA00E9B192 /* Debug */,
+diff --git a/RnDiffApp/ios/RnDiffApp.xcodeproj/xcshareddata/xcschemes/RnDiffApp.xcscheme b/RnDiffApp/ios/HelloWorld.xcodeproj/xcshareddata/xcschemes/HelloWorld.xcscheme
+similarity index 80%
+rename from RnDiffApp/ios/RnDiffApp.xcodeproj/xcshareddata/xcschemes/RnDiffApp.xcscheme
+rename to RnDiffApp/ios/HelloWorld.xcodeproj/xcshareddata/xcschemes/HelloWorld.xcscheme
+index e1d631ba5..b57be22ab 100644
+--- a/RnDiffApp/ios/RnDiffApp.xcodeproj/xcshareddata/xcschemes/RnDiffApp.xcscheme
++++ b/RnDiffApp/ios/HelloWorld.xcodeproj/xcshareddata/xcschemes/HelloWorld.xcscheme
+@@ -15,9 +15,9 @@
+             <BuildableReference
+                BuildableIdentifier = "primary"
+                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
+-               BuildableName = "RnDiffApp.app"
+-               BlueprintName = "RnDiffApp"
+-               ReferencedContainer = "container:RnDiffApp.xcodeproj">
++               BuildableName = "HelloWorld.app"
++               BlueprintName = "HelloWorld"
++               ReferencedContainer = "container:HelloWorld.xcodeproj">
+             </BuildableReference>
+          </BuildActionEntry>
+       </BuildActionEntries>
+@@ -33,9 +33,9 @@
+             <BuildableReference
+                BuildableIdentifier = "primary"
+                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
+-               BuildableName = "RnDiffAppTests.xctest"
+-               BlueprintName = "RnDiffAppTests"
+-               ReferencedContainer = "container:RnDiffApp.xcodeproj">
++               BuildableName = "HelloWorldTests.xctest"
++               BlueprintName = "HelloWorldTests"
++               ReferencedContainer = "container:HelloWorld.xcodeproj">
+             </BuildableReference>
+          </TestableReference>
+       </Testables>
+@@ -55,9 +55,9 @@
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
+-            BuildableName = "RnDiffApp.app"
+-            BlueprintName = "RnDiffApp"
+-            ReferencedContainer = "container:RnDiffApp.xcodeproj">
++            BuildableName = "HelloWorld.app"
++            BlueprintName = "HelloWorld"
++            ReferencedContainer = "container:HelloWorld.xcodeproj">
+          </BuildableReference>
+       </BuildableProductRunnable>
+    </LaunchAction>
+@@ -72,9 +72,9 @@
+          <BuildableReference
+             BuildableIdentifier = "primary"
+             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
+-            BuildableName = "RnDiffApp.app"
+-            BlueprintName = "RnDiffApp"
+-            ReferencedContainer = "container:RnDiffApp.xcodeproj">
++            BuildableName = "HelloWorld.app"
++            BlueprintName = "HelloWorld"
++            ReferencedContainer = "container:HelloWorld.xcodeproj">
+          </BuildableReference>
+       </BuildableProductRunnable>
+    </ProfileAction>
+diff --git a/RnDiffApp/ios/RnDiffApp/AppDelegate.h b/RnDiffApp/ios/HelloWorld/AppDelegate.h
+similarity index 100%
+rename from RnDiffApp/ios/RnDiffApp/AppDelegate.h
+rename to RnDiffApp/ios/HelloWorld/AppDelegate.h
+diff --git a/RnDiffApp/ios/RnDiffApp/AppDelegate.m b/RnDiffApp/ios/HelloWorld/AppDelegate.m
+similarity index 99%
+rename from RnDiffApp/ios/RnDiffApp/AppDelegate.m
+rename to RnDiffApp/ios/HelloWorld/AppDelegate.m
+index c3420dada..59b62377c 100644
+--- a/RnDiffApp/ios/RnDiffApp/AppDelegate.m
++++ b/RnDiffApp/ios/HelloWorld/AppDelegate.m
+@@ -33,7 +33,7 @@ static void InitializeFlipper(UIApplication *application) {
+ 
+   RCTBridge *bridge = [[RCTBridge alloc] initWithDelegate:self launchOptions:launchOptions];
+   RCTRootView *rootView = [[RCTRootView alloc] initWithBridge:bridge
+-                                                   moduleName:@"RnDiffApp"
++                                                   moduleName:@"HelloWorld"
+                                             initialProperties:nil];
+ 
+   if (@available(iOS 13.0, *)) {
+diff --git a/RnDiffApp/ios/RnDiffApp/Images.xcassets/AppIcon.appiconset/Contents.json b/RnDiffApp/ios/HelloWorld/Images.xcassets/AppIcon.appiconset/Contents.json
+similarity index 100%
+rename from RnDiffApp/ios/RnDiffApp/Images.xcassets/AppIcon.appiconset/Contents.json
+rename to RnDiffApp/ios/HelloWorld/Images.xcassets/AppIcon.appiconset/Contents.json
+diff --git a/RnDiffApp/ios/RnDiffApp/Images.xcassets/Contents.json b/RnDiffApp/ios/HelloWorld/Images.xcassets/Contents.json
+similarity index 100%
+rename from RnDiffApp/ios/RnDiffApp/Images.xcassets/Contents.json
+rename to RnDiffApp/ios/HelloWorld/Images.xcassets/Contents.json
+diff --git a/RnDiffApp/ios/RnDiffApp/Info.plist b/RnDiffApp/ios/HelloWorld/Info.plist
+similarity index 97%
+rename from RnDiffApp/ios/RnDiffApp/Info.plist
+rename to RnDiffApp/ios/HelloWorld/Info.plist
+index 903b7921c..948d58224 100644
+--- a/RnDiffApp/ios/RnDiffApp/Info.plist
++++ b/RnDiffApp/ios/HelloWorld/Info.plist
+@@ -5,7 +5,7 @@
+ 	<key>CFBundleDevelopmentRegion</key>
+ 	<string>en</string>
+ 	<key>CFBundleDisplayName</key>
+-	<string>RnDiffApp</string>
++	<string>Hello App Display Name</string>
+ 	<key>CFBundleExecutable</key>
+ 	<string>$(EXECUTABLE_NAME)</string>
+ 	<key>CFBundleIdentifier</key>
+diff --git a/RnDiffApp/ios/RnDiffApp/LaunchScreen.storyboard b/RnDiffApp/ios/HelloWorld/LaunchScreen.storyboard
+similarity index 94%
+rename from RnDiffApp/ios/RnDiffApp/LaunchScreen.storyboard
+rename to RnDiffApp/ios/HelloWorld/LaunchScreen.storyboard
+index 8f74d3c92..e13962e9b 100644
+--- a/RnDiffApp/ios/RnDiffApp/LaunchScreen.storyboard
++++ b/RnDiffApp/ios/HelloWorld/LaunchScreen.storyboard
+@@ -16,7 +16,7 @@
+                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                         <subviews>
+-                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="RnDiffApp" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" minimumFontSize="18" translatesAutoresizingMaskIntoConstraints="NO" id="GJd-Yh-RWb">
++                            <label opaque="NO" clipsSubviews="YES" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="HelloWorld" textAlignment="center" lineBreakMode="middleTruncation" baselineAdjustment="alignBaselines" minimumFontSize="18" translatesAutoresizingMaskIntoConstraints="NO" id="GJd-Yh-RWb">
+                                 <rect key="frame" x="0.0" y="202" width="375" height="43"/>
+                                 <fontDescription key="fontDescription" type="boldSystem" pointSize="36"/>
+                                 <nil key="highlightedColor"/>
+diff --git a/RnDiffApp/ios/RnDiffApp/main.m b/RnDiffApp/ios/HelloWorld/main.m
+similarity index 100%
+rename from RnDiffApp/ios/RnDiffApp/main.m
+rename to RnDiffApp/ios/HelloWorld/main.m
+diff --git a/RnDiffApp/ios/RnDiffAppTests/Info.plist b/RnDiffApp/ios/HelloWorldTests/Info.plist
+similarity index 100%
+rename from RnDiffApp/ios/RnDiffAppTests/Info.plist
+rename to RnDiffApp/ios/HelloWorldTests/Info.plist
+diff --git a/RnDiffApp/ios/RnDiffAppTests/RnDiffAppTests.m b/RnDiffApp/ios/HelloWorldTests/RnDiffAppTests.m
+similarity index 100%
+rename from RnDiffApp/ios/RnDiffAppTests/RnDiffAppTests.m
+rename to RnDiffApp/ios/HelloWorldTests/RnDiffAppTests.m
+diff --git a/RnDiffApp/ios/Podfile b/RnDiffApp/ios/Podfile
+index 30a745089..849752182 100644
+--- a/RnDiffApp/ios/Podfile
++++ b/RnDiffApp/ios/Podfile
+@@ -25,5 +25,6 @@ target 'RnDiffApp' do
+ 
+   post_install do |installer|
+     react_native_post_install(installer)
++    __apply_Xcode_12_5_M1_post_install_workaround(installer)
+   end
+ end
+diff --git a/RnDiffApp/metro.config.js b/RnDiffApp/metro.config.js
+index fd816dfa8..abc20133a 100644
+--- a/RnDiffApp/metro.config.js
++++ b/RnDiffApp/metro.config.js
+@@ -4,9 +4,14 @@
+  *
+  * @format
+  */
++const fs = require('fs');
+ const path = require('path');
+ const exclusionList = require('metro-config/src/defaults/exclusionList');
+ 
++const rnwPath = fs.realpathSync(
++  path.resolve(require.resolve('react-native-windows/package.json'), '..'),
++);
++
+ module.exports = {
+   resolver: {
+     blockList: exclusionList([
+@@ -14,7 +19,9 @@ module.exports = {
+       new RegExp(
+         `${path.resolve(__dirname, 'windows').replace(/[/\\]/g, '/')}.*`,
+       ),
+-      // This prevents "react-native run-windows" from hitting: EBUSY: resource busy or locked, open msbuild.ProjectImports.zip
++      // This prevents "react-native run-windows" from hitting: EBUSY: resource busy or locked, open msbuild.ProjectImports.zip or other files produced by msbuild
++      new RegExp(`${rnwPath}/build/.*`),
++      new RegExp(`${rnwPath}/target/.*`),
+       /.*\.ProjectImports\.zip/,
+     ]),
+   },
+diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
+index 7e1e0788a..4d7bc140b 100644
+--- a/RnDiffApp/package.json
++++ b/RnDiffApp/package.json
+@@ -12,8 +12,8 @@
+   },
+   "dependencies": {
+     "react": "17.0.2",
+-    "react-native": "0.65.2",
+-    "react-native-windows": "0.65.13"
++    "react-native": "0.66.1",
++    "react-native-windows": "0.66.3"
+   },
+   "devDependencies": {
+     "@babel/core": "^7.12.9",
+@@ -22,9 +22,9 @@
+     "babel-jest": "^26.6.3",
+     "eslint": "7.14.0",
+     "jest": "^26.6.3",
+-    "metro-react-native-babel-preset": "^0.66.0",
+-    "react-native-codegen": "^0.0.7",
+-    "react-test-renderer": "17.0.2"
++    "metro-react-native-babel-preset": "^0.66.2",
++    "react-test-renderer": "17.0.2",
++    "metro-config": "^0.66.2"
+   },
+   "jest": {
+     "preset": "react-native"
+diff --git a/RnDiffApp/windows/ExperimentalFeatures.props b/RnDiffApp/windows/ExperimentalFeatures.props
+index eb7c59f86..3cfbdc5a4 100644
+--- a/RnDiffApp/windows/ExperimentalFeatures.props
++++ b/RnDiffApp/windows/ExperimentalFeatures.props
+@@ -1,8 +1,14 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+ 
++  <!--
++    This file contains some important settings that will apply globally for
++    your app and *all* native modules your app consumes. These values were
++    set when you created the app project, and in some cases cannot be
++    simply changed here without recreating a new project.
++  -->
++
+   <PropertyGroup Label="Microsoft.ReactNative Experimental Features">
+-    
+     <!--
+       Enables default usage of Hermes.
+       
+@@ -17,6 +23,15 @@
+       See https://microsoft.github.io/react-native-windows/docs/winui3
+     -->
+     <UseWinUI3>false</UseWinUI3>
++
++    <!--
++      Changes compilation to assume use of Microsoft.ReactNative NuGet packages
++      instead of building the framework from source.
++      Requires creation of new project.
++
++      See https://microsoft.github.io/react-native-windows/docs/nuget
++    -->
++    <UseExperimentalNuget>false</UseExperimentalNuget>
+   
+   </PropertyGroup>
+ 
+diff --git a/RnDiffApp/windows/rndiffapp/MainPage.xaml b/RnDiffApp/windows/rndiffapp/MainPage.xaml
+index 3ba991dc7..b780e8e2c 100644
+--- a/RnDiffApp/windows/rndiffapp/MainPage.xaml
++++ b/RnDiffApp/windows/rndiffapp/MainPage.xaml
+@@ -10,7 +10,7 @@
+     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+     <react:ReactRootView 
+         x:Name="ReactRootView"
+-        ComponentName="RnDiffApp"
++        ComponentName="HelloWorld"
+         Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+         MinHeight="400"/>
+ </Page>
+diff --git a/RnDiffApp/windows/rndiffapp/PropertySheet.props b/RnDiffApp/windows/rndiffapp/PropertySheet.props
+index 5942ba395..ae89ceead 100644
+--- a/RnDiffApp/windows/rndiffapp/PropertySheet.props
++++ b/RnDiffApp/windows/rndiffapp/PropertySheet.props
+@@ -1,15 +1,15 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+   <ImportGroup Label="PropertySheets" />
+   <PropertyGroup Label="UserMacros" />
+   <!--
+-    To customize common C++/WinRT project properties: 
++    To customize common C++/WinRT project properties:
+     * right-click the project node
+     * expand the Common Properties item
+     * select the C++/WinRT property page
+ 
+     For more advanced scenarios, and complete documentation, please see:
+-    https://github.com/Microsoft/xlang/tree/master/src/package/cppwinrt/nuget 
++    https://github.com/Microsoft/xlang/tree/master/src/package/cppwinrt/nuget
+     -->
+   <PropertyGroup />
+   <ItemDefinitionGroup />
+diff --git a/RnDiffApp/windows/rndiffapp/packages.config b/RnDiffApp/windows/rndiffapp/packages.config
+index 3da1703a2..681139f6b 100644
+--- a/RnDiffApp/windows/rndiffapp/packages.config
++++ b/RnDiffApp/windows/rndiffapp/packages.config
+@@ -1,6 +1,6 @@
+ ﻿<?xml version="1.0" encoding="utf-8"?>
+ <packages>
+   <package id="Microsoft.Windows.CppWinRT" version="2.0.210312.4" targetFramework="native" />
+-  <package id="ReactNative.Hermes.Windows" version="0.8.0-ms.0" targetFramework="native" />
++  <package id="ReactNative.Hermes.Windows" version="0.9.0-ms.4" targetFramework="native" />
+   <package id="Microsoft.UI.Xaml" version="2.6.0" targetFramework="native" />
+ </packages>
+\ No newline at end of file
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj b/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
+index 77d2bceec..3ca74c43d 100644
+--- a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
++++ b/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj
+@@ -1,5 +1,5 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<Project ToolsVersion="16.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++<Project ToolsVersion="Current" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+   <Import Project="$(SolutionDir)\ExperimentalFeatures.props" Condition="Exists('$(SolutionDir)\ExperimentalFeatures.props')" />
+   <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props')" />
+   <PropertyGroup Label="Globals">
+@@ -14,16 +14,15 @@
+     <AppContainerApplication>true</AppContainerApplication>
+     <ApplicationType>Windows Store</ApplicationType>
+     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+-    <WindowsTargetPlatformVersion Condition=" '$(WindowsTargetPlatformVersion)' == '' ">10.0.18362.0</WindowsTargetPlatformVersion>
+-    <WindowsTargetPlatformMinVersion>10.0.16299.0</WindowsTargetPlatformMinVersion>
+     <PackageCertificateKeyFile>rndiffapp_TemporaryKey.pfx</PackageCertificateKeyFile>
+     <PackageCertificateThumbprint>UniqueThumbPrintHere</PackageCertificateThumbprint>
+     <PackageCertificatePassword>password</PackageCertificatePassword>
+   </PropertyGroup>
+-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+   <PropertyGroup Label="ReactNativeWindowsProps">
+     <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'node_modules\react-native-windows\package.json'))\node_modules\react-native-windows\</ReactNativeWindowsDir>
+   </PropertyGroup>
++  <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.WindowsSdk.Default.props" />
++  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+   <ItemGroup Label="ProjectConfigurations">
+     <ProjectConfiguration Include="Debug|ARM64">
+       <Configuration>Debug</Configuration>
+@@ -176,7 +175,7 @@
+   </Target>
+   <ImportGroup Label="ExtensionTargets">
+     <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets')" />
+-    <Import Project="..\packages\ReactNative.Hermes.Windows.0.8.0-ms.0\build\native\ReactNative.Hermes.Windows.targets" Condition="Exists('..\packages\ReactNative.Hermes.Windows.0.8.0-ms.0\build\native\ReactNative.Hermes.Windows.targets')" />
++    <Import Project="..\packages\ReactNative.Hermes.Windows.0.9.0-ms.4\build\native\ReactNative.Hermes.Windows.targets" Condition="Exists('..\packages\ReactNative.Hermes.Windows.0.9.0-ms.4\build\native\ReactNative.Hermes.Windows.targets')" />
+     <Import Project="..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets" Condition="Exists('..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets')" />
+   </ImportGroup>
+   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+@@ -185,7 +184,7 @@
+     </PropertyGroup>
+     <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props'))" />
+     <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets'))" />
+-    <Error Condition="!Exists('..\packages\ReactNative.Hermes.Windows.0.8.0-ms.0\build\native\ReactNative.Hermes.Windows.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\ReactNative.Hermes.Windows.0.8.0-ms.0\build\native\ReactNative.Hermes.Windows.targets'))" />
++    <Error Condition="!Exists('..\packages\ReactNative.Hermes.Windows.0.9.0-ms.4\build\native\ReactNative.Hermes.Windows.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\ReactNative.Hermes.Windows.0.9.0-ms.4\build\native\ReactNative.Hermes.Windows.targets'))" />
+     <Error Condition="!Exists('..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets'))" />
+   </Target>
+ </Project>
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters b/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters
+index 2aa08b712..ac1d04798 100644
+--- a/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters
++++ b/RnDiffApp/windows/rndiffapp/rndiffapp.vcxproj.filters
+@@ -1,5 +1,5 @@
+ ﻿<?xml version="1.0" encoding="utf-8"?>
+-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+   <ItemGroup>
+     <ApplicationDefinition Include="App.xaml" />
+   </ItemGroup>
+diff --git a/RnDiffApp/windows/rndiffapp/rndiffapp_TemporaryKey.pfx b/RnDiffApp/windows/rndiffapp/rndiffapp_TemporaryKey.pfx
+index e314f02fd9612646ac7ccb2972093861a87fffd1..d87f0630ce80f1ef4c69e3523b6d6cfd4d7755ad 100644
+GIT binary patch
+delta 2444
+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
+KlDlI90te7kP;=z~
+
+delta 2484
+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
+
