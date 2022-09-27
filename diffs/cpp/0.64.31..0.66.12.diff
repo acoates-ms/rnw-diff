@@ -1,0 +1,864 @@
+diff --git a/RnDiffApp/.flowconfig b/RnDiffApp/.flowconfig
+index 315f2747b..4320b7070 100644
+--- a/RnDiffApp/.flowconfig
++++ b/RnDiffApp/.flowconfig
+@@ -23,11 +23,10 @@ node_modules/react-native/flow/
+ [options]
+ emoji=true
+ 
+-esproposal.optional_chaining=enable
+-esproposal.nullish_coalescing=enable
+-
+ exact_by_default=true
+ 
++format.bracket_spacing=false
++
+ module.file_ext=.js
+ module.file_ext=.json
+ module.file_ext=.ios.js
+@@ -63,4 +62,4 @@ untyped-import
+ untyped-type-import
+ 
+ [version]
+-^0.137.0
++^0.158.0
+diff --git a/RnDiffApp/.gitignore b/RnDiffApp/.gitignore
+index ad572e632..cc53454ef 100644
+--- a/RnDiffApp/.gitignore
++++ b/RnDiffApp/.gitignore
+@@ -28,6 +28,7 @@ build/
+ .gradle
+ local.properties
+ *.iml
++*.hprof
+ 
+ # node.js
+ #
+diff --git a/RnDiffApp/.editorconfig b/RnDiffApp/_editorconfig
+similarity index 100%
+rename from RnDiffApp/.editorconfig
+rename to RnDiffApp/_editorconfig
+diff --git a/RnDiffApp/android/app/build.gradle b/RnDiffApp/android/app/build.gradle
+index fbb86bd32..c6d61c164 100644
+--- a/RnDiffApp/android/app/build.gradle
++++ b/RnDiffApp/android/app/build.gradle
+@@ -120,16 +120,16 @@ def jscFlavor = 'org.webkit:android-jsc:+'
+  */
+ def enableHermes = project.ext.react.get("enableHermes", false);
+ 
++/**
++ * Architectures to build native code for in debug.
++ */
++def nativeArchitectures = project.getProperties().get("reactNativeDebugArchitectures")
++
+ android {
+     ndkVersion rootProject.ext.ndkVersion
+ 
+     compileSdkVersion rootProject.ext.compileSdkVersion
+ 
+-    compileOptions {
+-        sourceCompatibility JavaVersion.VERSION_1_8
+-        targetCompatibility JavaVersion.VERSION_1_8
+-    }
+-
+     defaultConfig {
+         applicationId "com.rndiffapp"
+         minSdkVersion rootProject.ext.minSdkVersion
+@@ -156,6 +156,11 @@ android {
+     buildTypes {
+         debug {
+             signingConfig signingConfigs.debug
++            if (nativeArchitectures) {
++                ndk {
++                    abiFilters nativeArchitectures.split(',')
++                }
++            }
+         }
+         release {
+             // Caution! In production, you need to generate your own keystore file.
+@@ -191,7 +196,7 @@ dependencies {
+     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.0.0"
+ 
+     debugImplementation("com.facebook.flipper:flipper:${FLIPPER_VERSION}") {
+-      exclude group:'com.facebook.fbjni'
++        exclude group:'com.facebook.fbjni'
+     }
+ 
+     debugImplementation("com.facebook.flipper:flipper-network-plugin:${FLIPPER_VERSION}") {
+@@ -215,7 +220,7 @@ dependencies {
+ // Run this once to be able to run the application with BUCK
+ // puts all compile dependencies into folder libs for BUCK to use
+ task copyDownloadableDepsToLibs(type: Copy) {
+-    from configurations.compile
++    from configurations.implementation
+     into 'libs'
+ }
+ 
+diff --git a/RnDiffApp/android/app/src/main/res/values/styles.xml b/RnDiffApp/android/app/src/main/res/values/styles.xml
+index 9fab0be74..24bc06136 100644
+--- a/RnDiffApp/android/app/src/main/res/values/styles.xml
++++ b/RnDiffApp/android/app/src/main/res/values/styles.xml
+@@ -3,7 +3,6 @@
+     <!-- Base application theme. -->
+     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+         <!-- Customize your theme here. -->
+-        <item name="android:textColor">#000000</item>
+     </style>
+ 
+ </resources>
+diff --git a/RnDiffApp/android/build.gradle b/RnDiffApp/android/build.gradle
+index 93232f5fc..650989507 100644
+--- a/RnDiffApp/android/build.gradle
++++ b/RnDiffApp/android/build.gradle
+@@ -2,18 +2,18 @@
+ 
+ buildscript {
+     ext {
+-        buildToolsVersion = "29.0.3"
++        buildToolsVersion = "30.0.2"
+         minSdkVersion = 21
+-        compileSdkVersion = 29
+-        targetSdkVersion = 29
+-        ndkVersion = "20.1.5948944"
++        compileSdkVersion = 30
++        targetSdkVersion = 30
++        ndkVersion = "21.4.7075529"
+     }
+     repositories {
+         google()
+-        jcenter()
++        mavenCentral()
+     }
+     dependencies {
+-        classpath("com.android.tools.build:gradle:4.1.0")
++        classpath("com.android.tools.build:gradle:4.2.2")
+         // NOTE: Do not place your application dependencies here; they belong
+         // in the individual module build.gradle files
+     }
+@@ -21,6 +21,7 @@ buildscript {
+ 
+ allprojects {
+     repositories {
++        mavenCentral()
+         mavenLocal()
+         maven {
+             // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+@@ -32,7 +33,6 @@ allprojects {
+         }
+ 
+         google()
+-        jcenter()
+         maven { url 'https://www.jitpack.io' }
+     }
+ }
+diff --git a/RnDiffApp/android/gradle.properties b/RnDiffApp/android/gradle.properties
+index d21d03f2b..cdb4c2110 100644
+--- a/RnDiffApp/android/gradle.properties
++++ b/RnDiffApp/android/gradle.properties
+@@ -25,4 +25,4 @@ android.useAndroidX=true
+ android.enableJetifier=true
+ 
+ # Version of flipper SDK to use with React Native
+-FLIPPER_VERSION=0.75.1
++FLIPPER_VERSION=0.99.0
+diff --git a/RnDiffApp/android/gradle/wrapper/gradle-wrapper.properties b/RnDiffApp/android/gradle/wrapper/gradle-wrapper.properties
+index 14e30f741..7665b0fa9 100644
+--- a/RnDiffApp/android/gradle/wrapper/gradle-wrapper.properties
++++ b/RnDiffApp/android/gradle/wrapper/gradle-wrapper.properties
+@@ -1,5 +1,5 @@
+ distributionBase=GRADLE_USER_HOME
+ distributionPath=wrapper/dists
+-distributionUrl=https\://services.gradle.org/distributions/gradle-6.7-all.zip
++distributionUrl=https\://services.gradle.org/distributions/gradle-6.9-all.zip
+ zipStoreBase=GRADLE_USER_HOME
+ zipStorePath=wrapper/dists
+diff --git a/RnDiffApp/ios/Podfile b/RnDiffApp/ios/Podfile
+index 387c32ccc..849752182 100644
+--- a/RnDiffApp/ios/Podfile
++++ b/RnDiffApp/ios/Podfile
+@@ -1,7 +1,7 @@
+ require_relative '../node_modules/react-native/scripts/react_native_pods'
+ require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+ 
+-platform :ios, '10.0'
++platform :ios, '11.0'
+ 
+ target 'RnDiffApp' do
+   config = use_native_modules!
+@@ -25,5 +25,6 @@ target 'RnDiffApp' do
+ 
+   post_install do |installer|
+     react_native_post_install(installer)
++    __apply_Xcode_12_5_M1_post_install_workaround(installer)
+   end
+-end
+\ No newline at end of file
++end
+diff --git a/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj b/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
+index 7fba561ba..e459f23e1 100644
+--- a/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
++++ b/RnDiffApp/ios/RnDiffApp.xcodeproj/project.pbxproj
+@@ -293,7 +293,7 @@
+ 					"$(inherited)",
+ 				);
+ 				INFOPLIST_FILE = RnDiffAppTests/Info.plist;
+-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+@@ -316,7 +316,7 @@
+ 				BUNDLE_LOADER = "$(TEST_HOST)";
+ 				COPY_PHASE_STRIP = NO;
+ 				INFOPLIST_FILE = RnDiffAppTests/Info.plist;
+-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					"$(inherited)",
+ 					"@executable_path/Frameworks",
+@@ -429,12 +429,13 @@
+ 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+ 				GCC_WARN_UNUSED_FUNCTION = YES;
+ 				GCC_WARN_UNUSED_VARIABLE = YES;
+-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					/usr/lib/swift,
+ 					"$(inherited)",
+ 				);
+ 				LIBRARY_SEARCH_PATHS = (
++					"\"$(SDKROOT)/usr/lib/swift\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)\"",
+ 					"\"$(inherited)\"",
+@@ -486,12 +487,13 @@
+ 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+ 				GCC_WARN_UNUSED_FUNCTION = YES;
+ 				GCC_WARN_UNUSED_VARIABLE = YES;
+-				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
++				IPHONEOS_DEPLOYMENT_TARGET = 11.0;
+ 				LD_RUNPATH_SEARCH_PATHS = (
+ 					/usr/lib/swift,
+ 					"$(inherited)",
+ 				);
+ 				LIBRARY_SEARCH_PATHS = (
++					"\"$(SDKROOT)/usr/lib/swift\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)\"",
+ 					"\"$(TOOLCHAIN_DIR)/usr/lib/swift-5.0/$(PLATFORM_NAME)\"",
+ 					"\"$(inherited)\"",
+diff --git a/RnDiffApp/metro.config.js b/RnDiffApp/metro.config.js
+index fd816dfa8..abc20133a 100644
+--- a/RnDiffApp/metro.config.js
++++ b/RnDiffApp/metro.config.js
+@@ -4,9 +4,14 @@
+  *
+  * @format
+  */
++const fs = require('fs');
+ const path = require('path');
+ const exclusionList = require('metro-config/src/defaults/exclusionList');
+ 
++const rnwPath = fs.realpathSync(
++  path.resolve(require.resolve('react-native-windows/package.json'), '..'),
++);
++
+ module.exports = {
+   resolver: {
+     blockList: exclusionList([
+@@ -14,7 +19,9 @@ module.exports = {
+       new RegExp(
+         `${path.resolve(__dirname, 'windows').replace(/[/\\]/g, '/')}.*`,
+       ),
+-      // This prevents "react-native run-windows" from hitting: EBUSY: resource busy or locked, open msbuild.ProjectImports.zip
++      // This prevents "react-native run-windows" from hitting: EBUSY: resource busy or locked, open msbuild.ProjectImports.zip or other files produced by msbuild
++      new RegExp(`${rnwPath}/build/.*`),
++      new RegExp(`${rnwPath}/target/.*`),
+       /.*\.ProjectImports\.zip/,
+     ]),
+   },
+diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
+index 04fbd1357..eea686acd 100644
+--- a/RnDiffApp/package.json
++++ b/RnDiffApp/package.json
+@@ -11,9 +11,9 @@
+     "windows": "react-native run-windows"
+   },
+   "dependencies": {
+-    "react": "17.0.1",
+-    "react-native": "0.64.3",
+-    "react-native-windows": "0.64.31"
++    "react": "17.0.2",
++    "react-native": "0.66.4",
++    "react-native-windows": "0.66.12"
+   },
+   "devDependencies": {
+     "@babel/core": "^7.12.9",
+@@ -22,8 +22,9 @@
+     "babel-jest": "^26.6.3",
+     "eslint": "7.14.0",
+     "jest": "^26.6.3",
+-    "metro-react-native-babel-preset": "^0.64.0",
+-    "react-test-renderer": "17.0.1"
++    "metro-react-native-babel-preset": "^0.66.2",
++    "react-test-renderer": "17.0.2",
++    "metro-config": "^0.66.2"
+   },
+   "jest": {
+     "preset": "react-native"
+diff --git a/RnDiffApp/windows/ExperimentalFeatures.props b/RnDiffApp/windows/ExperimentalFeatures.props
+index 8164395c2..3cfbdc5a4 100644
+--- a/RnDiffApp/windows/ExperimentalFeatures.props
++++ b/RnDiffApp/windows/ExperimentalFeatures.props
+@@ -1,8 +1,21 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+ 
++  <!--
++    This file contains some important settings that will apply globally for
++    your app and *all* native modules your app consumes. These values were
++    set when you created the app project, and in some cases cannot be
++    simply changed here without recreating a new project.
++  -->
++
+   <PropertyGroup Label="Microsoft.ReactNative Experimental Features">
+-    
++    <!--
++      Enables default usage of Hermes.
++      
++      See https://microsoft.github.io/react-native-windows/docs/hermes
++    -->
++    <UseHermes>false</UseHermes>
++
+     <!--
+       Changes compilation to assume use of WinUI 3 instead of System XAML.
+       Requires creation of new project.
+@@ -12,13 +25,14 @@
+     <UseWinUI3>false</UseWinUI3>
+ 
+     <!--
+-      Compiles Hermes-related code and sets it to the default JS engine.
+-      Requires the "ReactNative.Hermes.Windows" NuGet package.
+-      
+-      See https://microsoft.github.io/react-native-windows/docs/hermes
++      Changes compilation to assume use of Microsoft.ReactNative NuGet packages
++      instead of building the framework from source.
++      Requires creation of new project.
++
++      See https://microsoft.github.io/react-native-windows/docs/nuget
+     -->
+-    <UseHermes>false</UseHermes>
++    <UseExperimentalNuget>false</UseExperimentalNuget>
+   
+   </PropertyGroup>
+ 
+-</Project>
+\ No newline at end of file
++</Project>
+diff --git a/RnDiffApp/windows/NuGet.Config b/RnDiffApp/windows/NuGet.Config
+index 37da5d50a..e5dd43a0a 100644
+--- a/RnDiffApp/windows/NuGet.Config
++++ b/RnDiffApp/windows/NuGet.Config
+@@ -5,8 +5,8 @@
+   </config>
+   <packageSources>
+     <clear />
+-    <add key="Nuget.org" value="https://api.nuget.org/v3/index.json" />
+     <add key="react-native" value="https://pkgs.dev.azure.com/ms/react-native/_packaging/react-native-public/nuget/v3/index.json" />
++    <add key="Nuget.org" value="https://api.nuget.org/v3/index.json" />
+   </packageSources>
+   <disabledPackageSources>
+     <clear />
+diff --git a/RnDiffApp/windows/RnDiffApp.sln b/RnDiffApp/windows/RnDiffApp.sln
+index 3dbbde48f..75e446b91 100644
+--- a/RnDiffApp/windows/RnDiffApp.sln
++++ b/RnDiffApp/windows/RnDiffApp.sln
+@@ -10,6 +10,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RnDiffApp", "RnDiffApp\RnDi
+ EndProject
+ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Folly", "..\node_modules\react-native-windows\Folly\Folly.vcxproj", "{A990658C-CE31-4BCC-976F-0FC6B1AF693D}"
+ EndProject
++Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fmt", "..\node_modules\react-native-windows\fmt\fmt.vcxproj", "{14B93DC8-FD93-4A6D-81CB-8BC96644501C}"
++EndProject
+ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReactCommon", "..\node_modules\react-native-windows\ReactCommon\ReactCommon.vcxproj", "{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}"
+ 	ProjectSection(ProjectDependencies) = postProject
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D} = {A990658C-CE31-4BCC-976F-0FC6B1AF693D}
+@@ -19,10 +21,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Chakra", "..\node_modules\r
+ EndProject
+ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Microsoft.ReactNative", "..\node_modules\react-native-windows\Microsoft.ReactNative\Microsoft.ReactNative.vcxproj", "{F7D32BD0-2749-483E-9A0D-1635EF7E3136}"
+ EndProject
+-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JSI.Shared", "..\node_modules\react-native-windows\JSI\Shared\JSI.Shared.vcxitems", "{0CC28589-39E4-4288-B162-97B959F8B843}"
+-EndProject
+-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "JSI.Universal", "..\node_modules\react-native-windows\JSI\Universal\JSI.Universal.vcxproj", "{A62D504A-16B8-41D2-9F19-E2E86019E5E4}"
+-EndProject
+ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Microsoft.ReactNative.Cxx", "..\node_modules\react-native-windows\Microsoft.ReactNative.Cxx\Microsoft.ReactNative.Cxx.vcxitems", "{DA8B35B3-DA00-4B02-BDE6-6A397B3FD46B}"
+ EndProject
+ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Common", "..\node_modules\react-native-windows\Common\Common.vcxproj", "{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}"
+@@ -37,10 +35,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Include", "..\node_modules\
+ EndProject
+ Global
+ 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+-		..\node_modules\react-native-windows\JSI\Shared\JSI.Shared.vcxitems*{0cc28589-39e4-4288-b162-97b959f8b843}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Shared\Shared.vcxitems*{2049dbe9-8d13-42c9-ae4b-413ae38fffd0}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Mso\Mso.vcxitems*{84e05bfa-cbaf-4f0d-bfb6-4ce85742a57e}*SharedItemsImports = 9
+-		..\node_modules\react-native-windows\JSI\Shared\JSI.Shared.vcxitems*{a62d504a-16b8-41d2-9f19-e2e86019e5e4}*SharedItemsImports = 4
+ 		..\node_modules\react-native-windows\Chakra\Chakra.vcxitems*{c38970c0-5fbf-4d69-90d8-cbac225ae895}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\Microsoft.ReactNative.Cxx\Microsoft.ReactNative.Cxx.vcxitems*{da8b35b3-da00-4b02-bde6-6a397b3fd46b}*SharedItemsImports = 9
+ 		..\node_modules\react-native-windows\include\Include.vcxitems*{ef074ba1-2d54-4d49-a28e-5e040b47cd2e}*SharedItemsImports = 9
+@@ -50,19 +46,14 @@ Global
+ 		..\node_modules\react-native-windows\Shared\Shared.vcxitems*{f7d32bd0-2749-483e-9a0d-1635ef7e3136}*SharedItemsImports = 4
+ 	EndGlobalSection
+ 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+-		Debug|ARM = Debug|ARM
+ 		Debug|ARM64 = Debug|ARM64
+ 		Debug|x64 = Debug|x64
+ 		Debug|x86 = Debug|x86
+-		Release|ARM = Release|ARM
+ 		Release|ARM64 = Release|ARM64
+ 		Release|x64 = Release|x64
+ 		Release|x86 = Release|x86
+ 	EndGlobalSection
+ 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+-		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Debug|ARM.ActiveCfg = Debug|ARM
+-		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Debug|ARM.Build.0 = Debug|ARM
+-		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Debug|ARM.Deploy.0 = Debug|ARM
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Debug|ARM64.ActiveCfg = Debug|ARM64
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Debug|ARM64.Build.0 = Debug|ARM64
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Debug|ARM64.Deploy.0 = Debug|ARM64
+@@ -72,9 +63,6 @@ Global
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Debug|x86.ActiveCfg = Debug|Win32
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Debug|x86.Build.0 = Debug|Win32
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Debug|x86.Deploy.0 = Debug|Win32
+-		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Release|ARM.ActiveCfg = Release|ARM
+-		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Release|ARM.Build.0 = Release|ARM
+-		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Release|ARM.Deploy.0 = Release|ARM
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Release|ARM64.ActiveCfg = Release|ARM64
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Release|ARM64.Build.0 = Release|ARM64
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Release|ARM64.Deploy.0 = Release|ARM64
+@@ -84,86 +72,68 @@ Global
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Release|x86.ActiveCfg = Release|Win32
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Release|x86.Build.0 = Release|Win32
+ 		{UNIQUE00-APP0-GUID-GOES-HERE00000000}.Release|x86.Deploy.0 = Release|Win32
+-		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Debug|ARM.ActiveCfg = Debug|ARM
+-		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Debug|ARM.Build.0 = Debug|ARM
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Debug|ARM64.ActiveCfg = Debug|ARM64
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Debug|ARM64.Build.0 = Debug|ARM64
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Debug|x64.ActiveCfg = Debug|x64
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Debug|x64.Build.0 = Debug|x64
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Debug|x86.ActiveCfg = Debug|Win32
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Debug|x86.Build.0 = Debug|Win32
+-		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Release|ARM.ActiveCfg = Release|ARM
+-		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Release|ARM.Build.0 = Release|ARM
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Release|ARM64.ActiveCfg = Release|ARM64
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Release|ARM64.Build.0 = Release|ARM64
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Release|x64.ActiveCfg = Release|x64
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Release|x64.Build.0 = Release|x64
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Release|x86.ActiveCfg = Release|Win32
+ 		{A990658C-CE31-4BCC-976F-0FC6B1AF693D}.Release|x86.Build.0 = Release|Win32
+-		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Debug|ARM.ActiveCfg = Debug|ARM
+-		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Debug|ARM.Build.0 = Debug|ARM
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Debug|ARM64.ActiveCfg = Debug|ARM64
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Debug|ARM64.Build.0 = Debug|ARM64
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Debug|x64.ActiveCfg = Debug|x64
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Debug|x64.Build.0 = Debug|x64
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Debug|x86.ActiveCfg = Debug|Win32
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Debug|x86.Build.0 = Debug|Win32
+-		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Release|ARM.ActiveCfg = Release|ARM
+-		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Release|ARM.Build.0 = Release|ARM
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Release|ARM64.ActiveCfg = Release|ARM64
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Release|ARM64.Build.0 = Release|ARM64
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Release|x64.ActiveCfg = Release|x64
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Release|x64.Build.0 = Release|x64
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Release|x86.ActiveCfg = Release|Win32
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD}.Release|x86.Build.0 = Release|Win32
+-		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Debug|ARM.ActiveCfg = Debug|ARM
+-		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Debug|ARM.Build.0 = Debug|ARM
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Debug|ARM64.ActiveCfg = Debug|ARM64
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Debug|ARM64.Build.0 = Debug|ARM64
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Debug|x64.ActiveCfg = Debug|x64
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Debug|x64.Build.0 = Debug|x64
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Debug|x86.ActiveCfg = Debug|Win32
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Debug|x86.Build.0 = Debug|Win32
+-		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Release|ARM.ActiveCfg = Release|ARM
+-		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Release|ARM.Build.0 = Release|ARM
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Release|ARM64.ActiveCfg = Release|ARM64
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Release|ARM64.Build.0 = Release|ARM64
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Release|x64.ActiveCfg = Release|x64
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Release|x64.Build.0 = Release|x64
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Release|x86.ActiveCfg = Release|Win32
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136}.Release|x86.Build.0 = Release|Win32
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Debug|ARM.ActiveCfg = Debug|ARM
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Debug|ARM.Build.0 = Debug|ARM
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Debug|ARM64.ActiveCfg = Debug|ARM64
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Debug|ARM64.Build.0 = Debug|ARM64
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Debug|x64.ActiveCfg = Debug|x64
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Debug|x64.Build.0 = Debug|x64
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Debug|x86.ActiveCfg = Debug|Win32
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Debug|x86.Build.0 = Debug|Win32
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Release|ARM.ActiveCfg = Release|ARM
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Release|ARM.Build.0 = Release|ARM
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Release|ARM64.ActiveCfg = Release|ARM64
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Release|ARM64.Build.0 = Release|ARM64
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Release|x64.ActiveCfg = Release|x64
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Release|x64.Build.0 = Release|x64
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Release|x86.ActiveCfg = Release|Win32
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4}.Release|x86.Build.0 = Release|Win32
+-		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Debug|ARM.ActiveCfg = Debug|ARM
+-		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Debug|ARM.Build.0 = Debug|ARM
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Debug|ARM64.ActiveCfg = Debug|ARM64
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Debug|ARM64.Build.0 = Debug|ARM64
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Debug|x64.ActiveCfg = Debug|x64
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Debug|x64.Build.0 = Debug|x64
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Debug|x86.ActiveCfg = Debug|Win32
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Debug|x86.Build.0 = Debug|Win32
+-		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Release|ARM.ActiveCfg = Release|ARM
+-		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Release|ARM.Build.0 = Release|ARM
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Release|ARM64.ActiveCfg = Release|ARM64
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Release|ARM64.Build.0 = Release|ARM64
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Release|x64.ActiveCfg = Release|x64
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Release|x64.Build.0 = Release|x64
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Release|x86.ActiveCfg = Release|Win32
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D}.Release|x86.Build.0 = Release|Win32
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Debug|ARM64.ActiveCfg = Debug|ARM64
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Debug|ARM64.Build.0 = Debug|ARM64
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Debug|x64.ActiveCfg = Debug|x64
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Debug|x64.Build.0 = Debug|x64
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Debug|x86.ActiveCfg = Debug|Win32
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Debug|x86.Build.0 = Debug|Win32
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Debug|x86.Deploy.0 = Debug|Win32
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Release|ARM64.ActiveCfg = Release|ARM64
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Release|ARM64.Build.0 = Release|ARM64
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Release|x64.ActiveCfg = Release|x64
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Release|x64.Build.0 = Release|x64
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Release|x86.ActiveCfg = Release|Win32
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Release|x86.Build.0 = Release|Win32
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C}.Release|x86.Deploy.0 = Release|Win32
+ 	EndGlobalSection
+ 	GlobalSection(SolutionProperties) = preSolution
+ 		HideSolutionNode = FALSE
+@@ -173,13 +143,12 @@ Global
+ 		{A9D95A91-4DB7-4F72-BEB6-FE8A5C89BFBD} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
+ 		{C38970C0-5FBF-4D69-90D8-CBAC225AE895} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
+ 		{F7D32BD0-2749-483E-9A0D-1635EF7E3136} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
+-		{0CC28589-39E4-4288-B162-97B959F8B843} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
+-		{A62D504A-16B8-41D2-9F19-E2E86019E5E4} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
+ 		{DA8B35B3-DA00-4B02-BDE6-6A397B3FD46B} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
+ 		{FCA38F3C-7C73-4C47-BE4E-32F77FA8538D} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
+ 		{2049DBE9-8D13-42C9-AE4B-413AE38FFFD0} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
+ 		{84E05BFA-CBAF-4F0D-BFB6-4CE85742A57E} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
+ 		{EF074BA1-2D54-4D49-A28E-5E040B47CD2E} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
++		{14B93DC8-FD93-4A6D-81CB-8BC96644501C} = {5EA20F54-880A-49F3-99FA-4B3FE54E8AB1}
+ 	EndGlobalSection
+ 	GlobalSection(ExtensibilityGlobals) = postSolution
+ 		SolutionGuid = {D43FAD39-F619-437D-BB40-04A3982ACB6A}
+diff --git a/RnDiffApp/windows/RnDiffApp/App.cpp b/RnDiffApp/windows/RnDiffApp/App.cpp
+index a5c8e08df..c6cb03dcf 100644
+--- a/RnDiffApp/windows/RnDiffApp/App.cpp
++++ b/RnDiffApp/windows/RnDiffApp/App.cpp
+@@ -6,9 +6,10 @@
+ #include "ReactPackageProvider.h"
+ 
+ using namespace winrt;
+-using namespace Windows::UI::Xaml;
+-using namespace Windows::UI::Xaml::Controls;
+-using namespace Windows::UI::Xaml::Navigation;
++using namespace xaml;
++using namespace xaml::Controls;
++using namespace xaml::Navigation;
++
+ using namespace Windows::ApplicationModel;
+ namespace winrt::RnDiffApp::implementation
+ {
+diff --git a/RnDiffApp/windows/RnDiffApp/App.h b/RnDiffApp/windows/RnDiffApp/App.h
+index 9af74debc..6d18d957e 100644
+--- a/RnDiffApp/windows/RnDiffApp/App.h
++++ b/RnDiffApp/windows/RnDiffApp/App.h
+@@ -2,7 +2,13 @@
+ 
+ #include "App.xaml.g.h"
+ 
++#include <CppWinRTIncludes.h>
++
++#ifdef USE_WINUI3
++namespace activation = winrt::Microsoft::UI::Xaml;
++#else
+ namespace activation = winrt::Windows::ApplicationModel::Activation;
++#endif
+ 
+ namespace winrt::RnDiffApp::implementation
+ {
+@@ -12,7 +18,7 @@ namespace winrt::RnDiffApp::implementation
+         void OnLaunched(activation::LaunchActivatedEventArgs const&);
+         void OnActivated(Windows::ApplicationModel::Activation::IActivatedEventArgs const &e);
+         void OnSuspending(IInspectable const&, Windows::ApplicationModel::SuspendingEventArgs const&);
+-        void OnNavigationFailed(IInspectable const&, Windows::UI::Xaml::Navigation::NavigationFailedEventArgs const&);
++        void OnNavigationFailed(IInspectable const&, xaml::Navigation::NavigationFailedEventArgs const&);
+       private:
+         using super = AppT<App>;
+     };
+diff --git a/RnDiffApp/windows/RnDiffApp/MainPage.cpp b/RnDiffApp/windows/RnDiffApp/MainPage.cpp
+index 8a1c0373f..f5450c94a 100644
+--- a/RnDiffApp/windows/RnDiffApp/MainPage.cpp
++++ b/RnDiffApp/windows/RnDiffApp/MainPage.cpp
+@@ -7,7 +7,7 @@
+ #include "App.h"
+ 
+ using namespace winrt;
+-using namespace Windows::UI::Xaml;
++using namespace xaml;
+ 
+ namespace winrt::RnDiffApp::implementation
+ {
+diff --git a/RnDiffApp/windows/RnDiffApp/MainPage.idl b/RnDiffApp/windows/RnDiffApp/MainPage.idl
+index e02436b68..7ff6aecdc 100644
+--- a/RnDiffApp/windows/RnDiffApp/MainPage.idl
++++ b/RnDiffApp/windows/RnDiffApp/MainPage.idl
+@@ -1,7 +1,9 @@
++#include "NamespaceRedirect.h"
++
+ namespace RnDiffApp
+ {
+     [default_interface]
+-    runtimeclass MainPage : Windows.UI.Xaml.Controls.Page
++    runtimeclass MainPage : XAML_NAMESPACE.Controls.Page
+     {
+         MainPage();
+     }
+diff --git a/RnDiffApp/windows/RnDiffApp/PropertySheet.props b/RnDiffApp/windows/RnDiffApp/PropertySheet.props
+index 5942ba395..ae89ceead 100644
+--- a/RnDiffApp/windows/RnDiffApp/PropertySheet.props
++++ b/RnDiffApp/windows/RnDiffApp/PropertySheet.props
+@@ -1,15 +1,15 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+   <ImportGroup Label="PropertySheets" />
+   <PropertyGroup Label="UserMacros" />
+   <!--
+-    To customize common C++/WinRT project properties: 
++    To customize common C++/WinRT project properties:
+     * right-click the project node
+     * expand the Common Properties item
+     * select the C++/WinRT property page
+ 
+     For more advanced scenarios, and complete documentation, please see:
+-    https://github.com/Microsoft/xlang/tree/master/src/package/cppwinrt/nuget 
++    https://github.com/Microsoft/xlang/tree/master/src/package/cppwinrt/nuget
+     -->
+   <PropertyGroup />
+   <ItemDefinitionGroup />
+diff --git a/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj b/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj
+index 638f61ab6..9522a8471 100644
+--- a/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj
++++ b/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<Project ToolsVersion="16.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+-  <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props')" />
++<Project ToolsVersion="Current" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+   <Import Project="$(SolutionDir)\ExperimentalFeatures.props" Condition="Exists('$(SolutionDir)\ExperimentalFeatures.props')" />
++  <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props')" />
+   <PropertyGroup Label="Globals">
+     <CppWinRTOptimized>true</CppWinRTOptimized>
+     <CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
+@@ -14,21 +14,16 @@
+     <AppContainerApplication>true</AppContainerApplication>
+     <ApplicationType>Windows Store</ApplicationType>
+     <ApplicationTypeRevision>10.0</ApplicationTypeRevision>
+-    <WindowsTargetPlatformVersion Condition=" '$(WindowsTargetPlatformVersion)' == '' ">10.0.18362.0</WindowsTargetPlatformVersion>
+-    <WindowsTargetPlatformMinVersion>10.0.16299.0</WindowsTargetPlatformMinVersion>
+     <PackageCertificateKeyFile>RnDiffApp_TemporaryKey.pfx</PackageCertificateKeyFile>
+     <PackageCertificateThumbprint>UniqueThumbPrintHere</PackageCertificateThumbprint>
+     <PackageCertificatePassword>password</PackageCertificatePassword>
+   </PropertyGroup>
+-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+   <PropertyGroup Label="ReactNativeWindowsProps">
+     <ReactNativeWindowsDir Condition="'$(ReactNativeWindowsDir)' == ''">$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), 'node_modules\react-native-windows\package.json'))\node_modules\react-native-windows\</ReactNativeWindowsDir>
+   </PropertyGroup>
++  <Import Project="$(ReactNativeWindowsDir)\PropertySheets\External\Microsoft.ReactNative.WindowsSdk.Default.props" />
++  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+   <ItemGroup Label="ProjectConfigurations">
+-    <ProjectConfiguration Include="Debug|ARM">
+-      <Configuration>Debug</Configuration>
+-      <Platform>ARM</Platform>
+-    </ProjectConfiguration>
+     <ProjectConfiguration Include="Debug|ARM64">
+       <Configuration>Debug</Configuration>
+       <Platform>ARM64</Platform>
+@@ -41,10 +36,6 @@
+       <Configuration>Debug</Configuration>
+       <Platform>x64</Platform>
+     </ProjectConfiguration>
+-    <ProjectConfiguration Include="Release|ARM">
+-      <Configuration>Release</Configuration>
+-      <Platform>ARM</Platform>
+-    </ProjectConfiguration>
+     <ProjectConfiguration Include="Release|ARM64">
+       <Configuration>Release</Configuration>
+       <Platform>ARM64</Platform>
+@@ -184,6 +175,7 @@
+   </Target>
+   <ImportGroup Label="ExtensionTargets">
+     <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets')" />
++    <Import Project="..\packages\ReactNative.Hermes.Windows.0.9.0-ms.4\build\native\ReactNative.Hermes.Windows.targets" Condition="Exists('..\packages\ReactNative.Hermes.Windows.0.9.0-ms.4\build\native\ReactNative.Hermes.Windows.targets')" />
+     <Import Project="..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets" Condition="Exists('..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets')" />
+   </ImportGroup>
+   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+@@ -192,6 +184,7 @@
+     </PropertyGroup>
+     <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props'))" />
+     <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets'))" />
++    <Error Condition="!Exists('..\packages\ReactNative.Hermes.Windows.0.9.0-ms.4\build\native\ReactNative.Hermes.Windows.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\ReactNative.Hermes.Windows.0.9.0-ms.4\build\native\ReactNative.Hermes.Windows.targets'))" />
+     <Error Condition="!Exists('..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\$(WinUIPackageName).$(WinUIPackageVersion)\build\native\$(WinUIPackageName).targets'))" />
+   </Target>
+ </Project>
+diff --git a/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj.filters b/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj.filters
+index 2aa08b712..ac1d04798 100644
+--- a/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj.filters
++++ b/RnDiffApp/windows/RnDiffApp/RnDiffApp.vcxproj.filters
+@@ -1,5 +1,5 @@
+ ﻿<?xml version="1.0" encoding="utf-8"?>
+-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
++<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+   <ItemGroup>
+     <ApplicationDefinition Include="App.xaml" />
+   </ItemGroup>
+diff --git a/RnDiffApp/windows/RnDiffApp/RnDiffApp_TemporaryKey.pfx b/RnDiffApp/windows/RnDiffApp/RnDiffApp_TemporaryKey.pfx
+index 913bfbd4dd65d7704437294c660541a91212b763..477622c875a43efe2ca0b6935f953620d7bbcd94 100644
+GIT binary patch
+delta 2448
+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
+O!ETGSfB|3v0te8Q_L36-
+
+delta 2423
+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
+
+diff --git a/RnDiffApp/windows/RnDiffApp/packages.config b/RnDiffApp/windows/RnDiffApp/packages.config
+index d41396566..681139f6b 100644
+--- a/RnDiffApp/windows/RnDiffApp/packages.config
++++ b/RnDiffApp/windows/RnDiffApp/packages.config
+@@ -1,5 +1,6 @@
+ ﻿<?xml version="1.0" encoding="utf-8"?>
+ <packages>
+   <package id="Microsoft.Windows.CppWinRT" version="2.0.210312.4" targetFramework="native" />
+-  <package id="Microsoft.UI.Xaml" version="2.3.191129002" targetFramework="native" />
++  <package id="ReactNative.Hermes.Windows" version="0.9.0-ms.4" targetFramework="native" />
++  <package id="Microsoft.UI.Xaml" version="2.6.0" targetFramework="native" />
+ </packages>
+\ No newline at end of file
+diff --git a/RnDiffApp/windows/RnDiffApp/pch.h b/RnDiffApp/windows/RnDiffApp/pch.h
+index aa93299bd..68657d914 100644
+--- a/RnDiffApp/windows/RnDiffApp/pch.h
++++ b/RnDiffApp/windows/RnDiffApp/pch.h
+@@ -6,16 +6,12 @@
+ #include <restrictederrorinfo.h>
+ #include <unknwn.h>
+ #include <windows.h>
++#include <CppWinRTIncludes.h>
+ #include <winrt/Windows.ApplicationModel.Activation.h>
+-#include <winrt/Windows.Foundation.Collections.h>
+-#include <winrt/Windows.Foundation.h>
+-#include <winrt/Windows.UI.Xaml.Controls.Primitives.h>
+-#include <winrt/Windows.UI.Xaml.Controls.h>
+-#include <winrt/Windows.UI.Xaml.Data.h>
+-#include <winrt/Windows.UI.Xaml.Interop.h>
+-#include <winrt/Windows.UI.Xaml.Markup.h>
+-#include <winrt/Windows.UI.Xaml.Navigation.h>
+-#include <winrt/Windows.UI.Xaml.h>
++#include <UI.Xaml.Controls.Primitives.h>
++#include <UI.Xaml.Controls.h>
++#include <UI.Xaml.Markup.h>
++#include <UI.Xaml.Navigation.h>
+ 
+ #include <winrt/Microsoft.ReactNative.h>
+ 
