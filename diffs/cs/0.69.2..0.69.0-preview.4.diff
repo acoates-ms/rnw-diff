@@ -1,0 +1,312 @@
+diff --git a/RnDiffApp/android/build.gradle b/RnDiffApp/android/build.gradle
+index c9bc539de..a53bfbfd5 100644
+--- a/RnDiffApp/android/build.gradle
++++ b/RnDiffApp/android/build.gradle
+@@ -12,6 +12,10 @@ buildscript {
+         if (System.properties['os.arch'] == "aarch64") {
+             // For M1 Users we need to use the NDK 24 which added support for aarch64
+             ndkVersion = "24.0.8215888"
++        } else if (Os.isFamily(Os.FAMILY_WINDOWS)) {
++            // For Android Users, we need to use NDK 23, otherwise the build will
++            // fail due to paths longer than the OS limit
++            ndkVersion = "23.1.7779620"
+         } else {
+             // Otherwise we default to the side-by-side NDK version from AGP.
+             ndkVersion = "21.4.7075529"
+diff --git a/RnDiffApp/ios/Podfile b/RnDiffApp/ios/Podfile
+index 6afe4d2e7..9c3ef42b7 100644
+--- a/RnDiffApp/ios/Podfile
++++ b/RnDiffApp/ios/Podfile
+@@ -4,8 +4,6 @@ require_relative '../node_modules/@react-native-community/cli-platform-ios/nativ
+ platform :ios, '12.4'
+ install! 'cocoapods', :deterministic_uuids => false
+ 
+-production = ENV["PRODUCTION"] == "1"
+-
+ target 'RnDiffApp' do
+   config = use_native_modules!
+ 
+@@ -15,10 +13,8 @@ target 'RnDiffApp' do
+   use_react_native!(
+     :path => config[:reactNativePath],
+     # to enable hermes on iOS, change `false` to `true` and then install pods
+-    :production => production,
+     :hermes_enabled => flags[:hermes_enabled],
+     :fabric_enabled => flags[:fabric_enabled],
+-    :flipper_configuration => FlipperConfiguration.enabled,
+     # An absolute path to your application root.
+     :app_path => "#{Pod::Config.instance.installation_root}/.."
+   )
+@@ -28,6 +24,12 @@ target 'RnDiffApp' do
+     # Pods for testing
+   end
+ 
++  # Enables Flipper.
++  #
++  # Note that if you have use_frameworks! enabled, Flipper will not work and
++  # you should disable the next line.
++  use_flipper!()
++
+   post_install do |installer|
+     react_native_post_install(installer)
+     __apply_Xcode_12_5_M1_post_install_workaround(installer)
+diff --git a/RnDiffApp/ios/.xcode.env b/RnDiffApp/ios/_xcode.env
+similarity index 100%
+rename from RnDiffApp/ios/.xcode.env
+rename to RnDiffApp/ios/_xcode.env
+diff --git a/RnDiffApp/package.json b/RnDiffApp/package.json
+index f7e91572d..c273fbbf2 100644
+--- a/RnDiffApp/package.json
++++ b/RnDiffApp/package.json
+@@ -1,5 +1,5 @@
+ {
+-  "name": "RnDiffApp",
++  "name": "rndiffapp",
+   "version": "0.0.1",
+   "private": true,
+   "scripts": {
+@@ -12,8 +12,8 @@
+   },
+   "dependencies": {
+     "react": "18.0.0",
+-    "react-native": "0.69.6",
+-    "react-native-windows": "0.69.2"
++    "react-native": "0.69.0-rc.0",
++    "react-native-windows": "0.69.0-preview.4"
+   },
+   "devDependencies": {
+     "@babel/core": "^7.12.9",
+@@ -22,7 +22,7 @@
+     "babel-jest": "^26.6.3",
+     "eslint": "^7.32.0",
+     "jest": "^26.6.3",
+-    "metro-react-native-babel-preset": "^0.70.3",
++    "metro-react-native-babel-preset": "^0.70.1",
+     "react-test-renderer": "18.0.0",
+     "metro-config": "^0.70.3"
+   },
+diff --git a/RnDiffApp/windows/RnDiffApp.sln b/RnDiffApp/windows/rndiffapp.sln
+similarity index 99%
+rename from RnDiffApp/windows/RnDiffApp.sln
+rename to RnDiffApp/windows/rndiffapp.sln
+index 2f52c26bb..3a758974c 100644
+--- a/RnDiffApp/windows/RnDiffApp.sln
++++ b/RnDiffApp/windows/rndiffapp.sln
+@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
+ # Visual Studio Version 16
+ VisualStudioVersion = 16.0.29215.179
+ MinimumVisualStudioVersion = 10.0.40219.1
+-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RnDiffApp", "RnDiffApp\RnDiffApp.csproj", "{UNIQUE00-APP0-GUID-GOES-HERE00000000}"
++Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "rndiffapp", "rndiffapp\rndiffapp.csproj", "{UNIQUE00-APP0-GUID-GOES-HERE00000000}"
+ EndProject
+ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Folly", "..\node_modules\react-native-windows\Folly\Folly.vcxproj", "{A990658C-CE31-4BCC-976F-0FC6B1AF693D}"
+ EndProject
+diff --git a/RnDiffApp/windows/RnDiffApp/.gitignore b/RnDiffApp/windows/rndiffapp/.gitignore
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/.gitignore
+rename to RnDiffApp/windows/rndiffapp/.gitignore
+diff --git a/RnDiffApp/windows/RnDiffApp/App.xaml b/RnDiffApp/windows/rndiffapp/App.xaml
+similarity index 85%
+rename from RnDiffApp/windows/RnDiffApp/App.xaml
+rename to RnDiffApp/windows/rndiffapp/App.xaml
+index f4db5c0cf..0f6237209 100644
+--- a/RnDiffApp/windows/RnDiffApp/App.xaml
++++ b/RnDiffApp/windows/rndiffapp/App.xaml
+@@ -1,8 +1,8 @@
+ ﻿<react:ReactApplication
+-    x:Class="RnDiffApp.App"
++    x:Class="rndiffapp.App"
+     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+-    xmlns:local="using:RnDiffApp"
++    xmlns:local="using:rndiffapp"
+     xmlns:react="using:Microsoft.ReactNative">
+     <Application.Resources>
+         <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+diff --git a/RnDiffApp/windows/RnDiffApp/App.xaml.cs b/RnDiffApp/windows/rndiffapp/App.xaml.cs
+similarity index 99%
+rename from RnDiffApp/windows/RnDiffApp/App.xaml.cs
+rename to RnDiffApp/windows/rndiffapp/App.xaml.cs
+index c147b0a09..2ec2fdbcd 100644
+--- a/RnDiffApp/windows/RnDiffApp/App.xaml.cs
++++ b/RnDiffApp/windows/rndiffapp/App.xaml.cs
+@@ -3,7 +3,7 @@ using Windows.ApplicationModel.Activation;
+ using Windows.UI.Xaml;
+ using Windows.UI.Xaml.Controls;
+ 
+-namespace RnDiffApp
++namespace rndiffapp
+ {
+     sealed partial class App : ReactApplication
+     {
+diff --git a/RnDiffApp/windows/RnDiffApp/Assets/LockScreenLogo.scale-200.png b/RnDiffApp/windows/rndiffapp/Assets/LockScreenLogo.scale-200.png
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/Assets/LockScreenLogo.scale-200.png
+rename to RnDiffApp/windows/rndiffapp/Assets/LockScreenLogo.scale-200.png
+diff --git a/RnDiffApp/windows/RnDiffApp/Assets/SplashScreen.scale-200.png b/RnDiffApp/windows/rndiffapp/Assets/SplashScreen.scale-200.png
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/Assets/SplashScreen.scale-200.png
+rename to RnDiffApp/windows/rndiffapp/Assets/SplashScreen.scale-200.png
+diff --git a/RnDiffApp/windows/RnDiffApp/Assets/Square150x150Logo.scale-200.png b/RnDiffApp/windows/rndiffapp/Assets/Square150x150Logo.scale-200.png
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/Assets/Square150x150Logo.scale-200.png
+rename to RnDiffApp/windows/rndiffapp/Assets/Square150x150Logo.scale-200.png
+diff --git a/RnDiffApp/windows/RnDiffApp/Assets/Square44x44Logo.scale-200.png b/RnDiffApp/windows/rndiffapp/Assets/Square44x44Logo.scale-200.png
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/Assets/Square44x44Logo.scale-200.png
+rename to RnDiffApp/windows/rndiffapp/Assets/Square44x44Logo.scale-200.png
+diff --git a/RnDiffApp/windows/RnDiffApp/Assets/Square44x44Logo.targetsize-24_altform-unplated.png b/RnDiffApp/windows/rndiffapp/Assets/Square44x44Logo.targetsize-24_altform-unplated.png
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/Assets/Square44x44Logo.targetsize-24_altform-unplated.png
+rename to RnDiffApp/windows/rndiffapp/Assets/Square44x44Logo.targetsize-24_altform-unplated.png
+diff --git a/RnDiffApp/windows/RnDiffApp/Assets/StoreLogo.png b/RnDiffApp/windows/rndiffapp/Assets/StoreLogo.png
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/Assets/StoreLogo.png
+rename to RnDiffApp/windows/rndiffapp/Assets/StoreLogo.png
+diff --git a/RnDiffApp/windows/RnDiffApp/Assets/Wide310x150Logo.scale-200.png b/RnDiffApp/windows/rndiffapp/Assets/Wide310x150Logo.scale-200.png
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/Assets/Wide310x150Logo.scale-200.png
+rename to RnDiffApp/windows/rndiffapp/Assets/Wide310x150Logo.scale-200.png
+diff --git a/RnDiffApp/windows/RnDiffApp/AutolinkedNativeModules.g.cs b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cs
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/AutolinkedNativeModules.g.cs
+rename to RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.cs
+diff --git a/RnDiffApp/windows/RnDiffApp/AutolinkedNativeModules.g.props b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.props
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/AutolinkedNativeModules.g.props
+rename to RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.props
+diff --git a/RnDiffApp/windows/RnDiffApp/AutolinkedNativeModules.g.targets b/RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.targets
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/AutolinkedNativeModules.g.targets
+rename to RnDiffApp/windows/rndiffapp/AutolinkedNativeModules.g.targets
+diff --git a/RnDiffApp/windows/RnDiffApp/MainPage.xaml b/RnDiffApp/windows/rndiffapp/MainPage.xaml
+similarity index 90%
+rename from RnDiffApp/windows/RnDiffApp/MainPage.xaml
+rename to RnDiffApp/windows/rndiffapp/MainPage.xaml
+index d32369f67..725f4590a 100644
+--- a/RnDiffApp/windows/RnDiffApp/MainPage.xaml
++++ b/RnDiffApp/windows/rndiffapp/MainPage.xaml
+@@ -1,8 +1,8 @@
+ <Page
+-    x:Class="RnDiffApp.MainPage"
++    x:Class="rndiffapp.MainPage"
+     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+-    xmlns:local="using:RnDiffApp"
++    xmlns:local="using:rndiffapp"
+     xmlns:react="using:Microsoft.ReactNative"
+     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+diff --git a/RnDiffApp/windows/RnDiffApp/MainPage.xaml.cs b/RnDiffApp/windows/rndiffapp/MainPage.xaml.cs
+similarity index 97%
+rename from RnDiffApp/windows/RnDiffApp/MainPage.xaml.cs
+rename to RnDiffApp/windows/rndiffapp/MainPage.xaml.cs
+index 7eca56ef9..32039400a 100644
+--- a/RnDiffApp/windows/RnDiffApp/MainPage.xaml.cs
++++ b/RnDiffApp/windows/rndiffapp/MainPage.xaml.cs
+@@ -17,7 +17,7 @@ using Windows.UI.Xaml.Navigation;
+ 
+ // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
+ 
+-namespace RnDiffApp
++namespace rndiffapp
+ {
+     /// <summary>
+     /// An empty page that can be used on its own or navigated to within a Frame.
+diff --git a/RnDiffApp/windows/RnDiffApp/Package.appxmanifest b/RnDiffApp/windows/rndiffapp/Package.appxmanifest
+similarity index 90%
+rename from RnDiffApp/windows/RnDiffApp/Package.appxmanifest
+rename to RnDiffApp/windows/rndiffapp/Package.appxmanifest
+index 33ef14c22..059eeb445 100644
+--- a/RnDiffApp/windows/RnDiffApp/Package.appxmanifest
++++ b/RnDiffApp/windows/rndiffapp/Package.appxmanifest
+@@ -12,7 +12,7 @@
+   <mp:PhoneIdentity PhoneProductId="{UNIQUE00-APPX-GUID-GOES-HERE00000000}" PhonePublisherId="AppSpecificPublisherGuidHere"/>
+ 
+   <Properties>
+-    <DisplayName>RnDiffApp</DisplayName>
++    <DisplayName>rndiffapp</DisplayName>
+     <PublisherDisplayName>AppSpecificPublisherNameHere</PublisherDisplayName>
+     <Logo>Assets\StoreLogo.png</Logo>
+   </Properties>
+@@ -29,12 +29,12 @@
+     <Application
+       Id="App"
+       Executable="$targetnametoken$.exe"
+-      EntryPoint="RnDiffApp.App">
++      EntryPoint="rndiffapp.App">
+       <uap:VisualElements
+-        DisplayName="RnDiffApp"
++        DisplayName="rndiffapp"
+         Square150x150Logo="Assets\Square150x150Logo.png"
+         Square44x44Logo="Assets\Square44x44Logo.png"
+-        Description="RnDiffApp"
++        Description="rndiffapp"
+         BackgroundColor="transparent">
+         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"/>
+         <uap:SplashScreen Image="Assets\SplashScreen.png" />
+diff --git a/RnDiffApp/windows/RnDiffApp/Properties/AssemblyInfo.cs b/RnDiffApp/windows/rndiffapp/Properties/AssemblyInfo.cs
+similarity index 89%
+rename from RnDiffApp/windows/RnDiffApp/Properties/AssemblyInfo.cs
+rename to RnDiffApp/windows/rndiffapp/Properties/AssemblyInfo.cs
+index ce8febc98..34214ccf1 100644
+--- a/RnDiffApp/windows/RnDiffApp/Properties/AssemblyInfo.cs
++++ b/RnDiffApp/windows/rndiffapp/Properties/AssemblyInfo.cs
+@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
+ // General Information about an assembly is controlled through the following 
+ // set of attributes. Change these attribute values to modify the information
+ // associated with an assembly.
+-[assembly: AssemblyTitle("RnDiffApp")]
++[assembly: AssemblyTitle("rndiffapp")]
+ [assembly: AssemblyDescription("")]
+ [assembly: AssemblyConfiguration("")]
+ [assembly: AssemblyCompany("")]
+-[assembly: AssemblyProduct("RnDiffApp")]
++[assembly: AssemblyProduct("rndiffapp")]
+ [assembly: AssemblyCopyright("Copyright ©  2019")]
+ [assembly: AssemblyTrademark("")]
+ [assembly: AssemblyCulture("")]
+diff --git a/RnDiffApp/windows/RnDiffApp/Properties/Default.rd.xml b/RnDiffApp/windows/rndiffapp/Properties/Default.rd.xml
+similarity index 100%
+rename from RnDiffApp/windows/RnDiffApp/Properties/Default.rd.xml
+rename to RnDiffApp/windows/rndiffapp/Properties/Default.rd.xml
+diff --git a/RnDiffApp/windows/RnDiffApp/ReactPackageProvider.cs b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cs
+similarity index 95%
+rename from RnDiffApp/windows/RnDiffApp/ReactPackageProvider.cs
+rename to RnDiffApp/windows/rndiffapp/ReactPackageProvider.cs
+index d17e9a6c9..755d22c8a 100644
+--- a/RnDiffApp/windows/RnDiffApp/ReactPackageProvider.cs
++++ b/RnDiffApp/windows/rndiffapp/ReactPackageProvider.cs
+@@ -1,6 +1,6 @@
+ using Microsoft.ReactNative;
+ 
+-namespace RnDiffApp
++namespace rndiffapp
+ {
+     public partial class ReactPackageProvider : IReactPackageProvider
+     {
+diff --git a/RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj b/RnDiffApp/windows/rndiffapp/rndiffapp.csproj
+similarity index 98%
+rename from RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj
+rename to RnDiffApp/windows/rndiffapp/rndiffapp.csproj
+index 730d97bc8..87d700e6a 100644
+--- a/RnDiffApp/windows/RnDiffApp/RnDiffApp.csproj
++++ b/RnDiffApp/windows/rndiffapp/rndiffapp.csproj
+@@ -1,5 +1,5 @@
+ ﻿<?xml version="1.0" encoding="utf-8"?>
+-<!-- This project was created with react-native-windows 0.69.2 -->
++<!-- This project was created with react-native-windows 0.69.0-preview.4 -->
+ <Project ToolsVersion="Current" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+   <Import Project="$(SolutionDir)\ExperimentalFeatures.props" Condition="Exists('$(SolutionDir)\ExperimentalFeatures.props')" />
+@@ -12,8 +12,8 @@
+     <ProjectGuid>{UNIQUE00-APP0-GUID-GOES-HERE00000000}</ProjectGuid>
+     <OutputType>AppContainerExe</OutputType>
+     <AppDesignerFolder>Properties</AppDesignerFolder>
+-    <RootNamespace>RnDiffApp</RootNamespace>
+-    <AssemblyName>RnDiffApp</AssemblyName>
++    <RootNamespace>rndiffapp</RootNamespace>
++    <AssemblyName>rndiffapp</AssemblyName>
+     <DefaultLanguage>en-US</DefaultLanguage>
+     <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
+     <TargetPlatformVersion Condition=" '$(TargetPlatformVersion)' == '' ">10.0.19041.0</TargetPlatformVersion>
