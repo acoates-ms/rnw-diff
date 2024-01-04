@@ -22,8 +22,8 @@ function run() {
       execSync(newReleaseCmd, { stdio: "inherit" });
     }
   }
-  if (existsSync(join(__dirname, "wt-diff"))) {
-    execSync(`rmdir /S /Q wt-diff`, { cwd: __dirname, stdio: "inherit" });
+  if (existsSync(join(__dirname, "wt-diffs"))) {
+    execSync(`rmdir /S /Q wt-diffs`, { cwd: __dirname, stdio: "inherit" });
     execSync(`git worktree prune`, { cwd: __dirname, stdio: "inherit" });
   }
 }
