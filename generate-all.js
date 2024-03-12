@@ -3,7 +3,7 @@
 const { execSync } = require("child_process");
 const { join } = require("path");
 const { existsSync } = require("fs");
-import { versionAlreadyExists } from './new-release-tools';
+const { versionAlreadyExists } = require('./new-release-tools');
 
 let onlyOne = false;
 

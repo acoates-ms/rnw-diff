@@ -1,7 +1,6 @@
 // @ts-check
 const semver = require("semver");
-
-import {addReleaseToList, createNewRelease, generateDiffs, versionAlreadyExists} from './new-release-tools';
+const { addReleaseToList, createNewRelease, generateDiffs, versionAlreadyExists } = require('./new-release-tools');
 
 // TODO Diffs need to ignore pfx files and android/ios dirs
 
