@@ -153,10 +153,12 @@ function generateDiffs(rnwVersion, apptype) {
   runCmd("git pull", wtDiffsDir);
 
   if (!existsSync(path.resolve(wtDiffsDir, `diffs/${apptype}`))) {
-    mkdirSync(path.resolve(wtDiffsDir, `diffs/${apptype}`), {recursive:true});
+    mkdirSync(path.resolve(wtDiffsDir, `diffs/${apptype}`), {
+      recursive: true,
+    });
   }
 
-  for (let existingRelease of getReleases(apptype === 'mac')) {
+  for (let existingRelease of getReleases(apptype === "mac")) {
     console.log("processing " + existingRelease);
     if (existingRelease === rnwVersion) continue;
     runCmd(
@@ -168,7 +170,19 @@ function generateDiffs(rnwVersion, apptype) {
   }
 
   runCmd("git add .", wtDiffsDir);
-  runCmd(`git commit -m "Add release ${rnwVersion} ${apptype} diffs"`, wtDiffsDir);
+  try {
+    runCmd(
+      `git commit -m "Add release ${rnwVersion} ${apptype} diffs"`,
+      wtDiffsDir
+    );
+  } catch (e) {
+    console.log(
+      "Failure to commit diffs - If there are no changes this could indicate a previous partial run of a version update which would be ignoreable"
+    );
+    if (!e.toString().includes("nothing to commit")) {
+      throw e;
+    }
+  }
   runCmd("git push", wtDiffsDir);
 }
 
