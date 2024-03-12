@@ -3,6 +3,7 @@
 const { execSync } = require("child_process");
 const { join } = require("path");
 const { existsSync } = require("fs");
+import { versionAlreadyExists } from './new-release-tools';
 
 let onlyOne = false;
 
@@ -23,11 +24,15 @@ function run() {
     const inVersionRange = matches[1] === "0" && Number.parseInt(matches[2]) >= 61;
 
     if (inVersionRange && (!isPrerelease || isPreviewRelease)) {
-      const newReleaseCmd = `node new-release.js ${rnwVersion}`;
-      console.log("Running: " + newReleaseCmd);
-      execSync(newReleaseCmd, { stdio: "inherit" });
-      if (onlyOne){
-        break;
+      if (versionAlreadyExists(rnwVersion, false /*mac*/)) {
+        console.log(`Already generated diff for ${rnwVersion}`);
+      } else {
+        const newReleaseCmd = `node new-release.js ${rnwVersion}`;
+        console.log("Running: " + newReleaseCmd);
+        execSync(newReleaseCmd, { stdio: "inherit" });
+        if (onlyOne) {
+          break;
+        }
       }
     }
   }
