@@ -149,7 +149,7 @@ function generateDiffs(rnwVersion, apptype) {
   }
 
   runCmd("git fetch origin diffs", wtDiffsDir);
-  runCmd("git checkout diffs", wtDiffsDir);
+  runCmd("git checkout diffs --", wtDiffsDir);
   runCmd("git pull", wtDiffsDir);
 
   if (!existsSync(path.resolve(wtDiffsDir, `diffs/${apptype}`))) {
