@@ -148,9 +148,9 @@ function generateDiffs(rnwVersion, apptype) {
     runCmd("git worktree add wt-diffs diffs");
   }
 
-  if (!process.env.CI) {
-    runCmd("git pull", wtDiffsDir);
-  }
+  runCmd("git fetch origin diffs", wtDiffsDir);
+  runCmd("git checkout diffs", wtDiffsDir);
+  runCmd("git pull", wtDiffsDir);
 
   if (!existsSync(path.resolve(wtDiffsDir, `diffs/${apptype}`))) {
     mkdirSync(path.resolve(wtDiffsDir, `diffs/${apptype}`), {recursive:true});
