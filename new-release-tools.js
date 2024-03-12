@@ -151,7 +151,7 @@ function generateDiffs(rnwVersion, apptype) {
   runCmd("git pull", wtDiffsDir);
 
   if (!existsSync(path.resolve(wtDiffsDir, `diffs/${apptype}`))) {
-    mkdirSync(path.resolve(wtDiffsDir, `diffs/${apptype}`));
+    mkdirSync(path.resolve(wtDiffsDir, `diffs/${apptype}`), {recursive:true});
   }
 
   for (let existingRelease of getReleases(apptype === 'mac')) {
