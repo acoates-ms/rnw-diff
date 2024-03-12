@@ -4,7 +4,13 @@ const { execSync } = require("child_process");
 const { join } = require("path");
 const { existsSync } = require("fs");
 
+let onlyOne = false;
+
 function run() {
+
+  if (process.argv.length == 3 && process.argv[2] === 'onlyOne') {
+    onlyOne = true;
+  }
   const cmd = "npm info react-native-windows versions --json";
   console.log("Running: " + cmd);
   const allVersions = JSON.parse(execSync(cmd).toString());
@@ -20,6 +26,9 @@ function run() {
       const newReleaseCmd = `node new-release.js ${rnwVersion}`;
       console.log("Running: " + newReleaseCmd);
       execSync(newReleaseCmd, { stdio: "inherit" });
+      if (onlyOne){
+        break;
+      }
     }
   }
   if (existsSync(join(__dirname, "wt-diffs"))) {
