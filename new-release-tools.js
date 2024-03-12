@@ -170,19 +170,10 @@ function generateDiffs(rnwVersion, apptype) {
   }
 
   runCmd("git add .", wtDiffsDir);
-  try {
-    runCmd(
-      `git commit -m "Add release ${rnwVersion} ${apptype} diffs"`,
-      wtDiffsDir
-    );
-  } catch (e) {
-    console.log(
-      "Failure to commit diffs - If there are no changes this could indicate a previous partial run of a version update which would be ignoreable"
-    );
-    if (!e.toString().includes("nothing to commit")) {
-      throw e;
-    }
-  }
+  runCmd(
+    `git commit -m "Add release ${rnwVersion} ${apptype} diffs"`,
+    wtDiffsDir
+  );
   runCmd("git push", wtDiffsDir);
 }
 
