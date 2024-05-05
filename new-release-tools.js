@@ -67,7 +67,7 @@ function createNewRelease(newRelease, rnVersion, apptype) {
     // Modify some files to prevent new guids being generated and showing up in the diffs
     runCmd(`node ../standardizeProj.js`, wtAppPath);
   }
-  runCmd(`git add ${appName}`, wtAppPath);
+  runCmd(`git add ${appName}/`, wtAppPath);
   runCmd(`git commit -m "Release ${apptype}/${newRelease}"`, wtAppPath);
   runCmd(
     `git push origin --delete "${branchName}" || git push origin "${branchName}"`,
