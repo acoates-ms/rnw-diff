@@ -55,6 +55,8 @@ function createNewRelease(newRelease, rnVersion, apptype) {
     wtAppPath
   );
   if (apptype === "mac") {
+    // Remove base package.json to avoid workspace issues
+    require('fs').unlinkSync(path.resolve(__dirname, './package.json'));
     runCmd(`yarn`, appDir);
     runCmd(
       `npx --yes react-native-macos-init --version ${newRelease} --overwrite`,
