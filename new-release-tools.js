@@ -51,10 +51,11 @@ function createNewRelease(newRelease, rnVersion, apptype) {
   runCmd(`git checkout -b "${branchName}"`, wtAppPath);
 
   runCmd(
-    `npx --yes react-native init "${appName}" --template react-native@${rnVersion} --skip-git-init`,
+    `npx --yes react-native init "${appName}" --template react-native@${rnVersion} --skip-install --skip-git-init`,
     wtAppPath
   );
   if (apptype === "mac") {
+    runCmd(`yarn`, appDir);
     runCmd(
       `npx --yes react-native-macos-init --version ${newRelease} --overwrite`,
       appDir
