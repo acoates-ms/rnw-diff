@@ -50,14 +50,14 @@ function createNewRelease(newRelease, rnVersion, apptype) {
   }
   runCmd(`git checkout -b "${branchName}"`, wtAppPath);
 
+  // Remove base package.json to avoid workspace issues
+  require('fs').unlinkSync(path.resolve(__dirname, './package.json'));
+
   runCmd(
-    `npx --yes react-native init "${appName}" --template react-native@${rnVersion} --skip-install --skip-git-init`,
+    `npx --yes react-native init "${appName}" --template react-native@${rnVersion} --skip-git-init`,
     wtAppPath
   );
   if (apptype === "mac") {
-    // Remove base package.json to avoid workspace issues
-    require('fs').unlinkSync(path.resolve(__dirname, './package.json'));
-    runCmd(`yarn`, appDir);
     runCmd(
       `npx --yes react-native-macos-init --version ${newRelease} --overwrite`,
       appDir
