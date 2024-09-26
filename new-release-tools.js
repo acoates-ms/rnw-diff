@@ -81,11 +81,36 @@ function createNewRelease(newRelease, rnVersion, apptype) {
 }
 
 let releasesWindows;
+let releasesWindowsIgnored;
 let releasesMac;
+let releasesMacIgnored;
 const releasesFileWindows = path.resolve(__dirname, "RELEASES");
 const releasesIgnoredFileWindows = path.resolve(__dirname, "RELEASES_ignored");
 const releasesFileMac = path.resolve(__dirname, "RELEASES_MAC");
 const releasesIgnoredFileMac = path.resolve(__dirname, "RELEASES_MAC_ignored");
+
+// To save space we do not keep all versions around forever
+function getIgnoredReleases(isMac) {
+  if (!isMac) {
+    if (!releasesWindowsIgnored) {
+      releasesWindowsIgnored = readFileSync(releasesIgnoredFileWindows)
+        .toString()
+        .split("\n")
+        .map((_) => _.trim());
+    }
+
+    return releasesWindowsIgnored;
+  } else {
+    if (!releasesMacIgnored) {
+      releasesMacIgnored = readFileSync(releasesIgnoredFileMac)
+        .toString()
+        .split("\n")
+        .map((_) => _.trim());
+    }
+
+    return releasesMacIgnored;
+  }
+}
 
 /**
  * @param {boolean} [isMac] - get Mac releases instead of windows
@@ -93,33 +118,19 @@ const releasesIgnoredFileMac = path.resolve(__dirname, "RELEASES_MAC_ignored");
 function getReleases(isMac) {
   if (!isMac) {
     if (!releasesWindows) {
-
-      const releasesIgnoredWindows = readFileSync(releasesIgnoredFileWindows)
-        .toString()
-        .split("\n")
-        .map((_) => _.trim());
-
       releasesWindows = readFileSync(releasesFileWindows)
         .toString()
         .split("\n")
-        .map((_) => _.trim())
-        .filter(_ => !releasesIgnoredWindows.includes(_));
+        .map((_) => _.trim());
     }
 
     return releasesWindows;
   } else {
     if (!releasesMac) {
-
-      const releasesMacIgnored = readFileSync(releasesIgnoredFileMac)
-        .toString()
-        .split("\n")
-        .map((_) => _.trim());
-
       releasesMac = readFileSync(releasesFileMac)
         .toString()
         .split("\n")
-        .map((_) => _.trim())
-        .filter(_ => !releasesMacIgnored.includes(_));
+        .map((_) => _.trim());
     }
 
     return releasesMac;
@@ -150,7 +161,7 @@ function addReleaseToList(rnwVersion, mac) {
  * @param {boolean} [mac] - mac vs windows
  */
 function versionAlreadyExists(rnwVersion, mac) {
-  return getReleases(mac).indexOf(rnwVersion) >= 0;
+  return getReleases(mac).includes(rnwVersion) || getIgnoredReleases(mac).includes(rnwVersion);
 }
 
 /**
@@ -173,10 +184,12 @@ function generateDiffs(rnwVersion, apptype) {
       recursive: true,
     });
   }
+  const isMac = apptype === "mac";
 
-  for (let existingRelease of getReleases(apptype === "mac")) {
+  for (let existingRelease of getReleases(isMac)) {
     console.log("processing " + existingRelease);
     if (existingRelease === rnwVersion) continue;
+
     runCmd(
       `git diff --binary origin/release/${apptype}/"${existingRelease}"..origin/release/${apptype}/"${rnwVersion}" > wt-diffs/diffs/${apptype}/"${existingRelease}".."${rnwVersion}".diff`
     );
@@ -198,4 +211,5 @@ module.exports = {
   createNewRelease,
   generateDiffs,
   versionAlreadyExists,
+  getReleases,
 };
