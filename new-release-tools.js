@@ -83,7 +83,9 @@ function createNewRelease(newRelease, rnVersion, apptype) {
 let releasesWindows;
 let releasesMac;
 const releasesFileWindows = path.resolve(__dirname, "RELEASES");
+const releasesIgnoredFileWindows = path.resolve(__dirname, "RELEASES_ignored");
 const releasesFileMac = path.resolve(__dirname, "RELEASES_MAC");
+const releasesIgnoredFileMac = path.resolve(__dirname, "RELEASES_MAC_ignored");
 
 /**
  * @param {boolean} [isMac] - get Mac releases instead of windows
@@ -91,19 +93,33 @@ const releasesFileMac = path.resolve(__dirname, "RELEASES_MAC");
 function getReleases(isMac) {
   if (!isMac) {
     if (!releasesWindows) {
-      releasesWindows = readFileSync(releasesFileWindows)
+
+      const releasesIgnoredWindows = readFileSync(releasesIgnoredFileWindows)
         .toString()
         .split("\n")
         .map((_) => _.trim());
+
+      releasesWindows = readFileSync(releasesFileWindows)
+        .toString()
+        .split("\n")
+        .map((_) => _.trim())
+        .filter(_ => !releasesIgnoredWindows.includes(_));
     }
 
     return releasesWindows;
   } else {
     if (!releasesMac) {
-      releasesMac = readFileSync(releasesFileMac)
+
+      const releasesMacIgnored = readFileSync(releasesIgnoredFileMac)
         .toString()
         .split("\n")
         .map((_) => _.trim());
+
+      releasesMac = readFileSync(releasesFileMac)
+        .toString()
+        .split("\n")
+        .map((_) => _.trim())
+        .filter(_ => !releasesMacIgnored.includes(_));
     }
 
     return releasesMac;
