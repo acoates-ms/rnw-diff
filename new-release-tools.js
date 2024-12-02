@@ -51,7 +51,7 @@ function createNewRelease(newRelease, rnVersion, apptype) {
   runCmd(`git checkout -b "${branchName}"`, wtAppPath);
 
   runCmd(
-    `npx --yes react-native init "${appName}" --template react-native@${rnVersion} --skip-git-init`,
+    `npx --yes @react-native-community/cli init "${appName}" --version ${rnVersion} --install-pods false --verbose --skip-git-init true`,
     wtAppPath
   );
   if (apptype === "mac") {
