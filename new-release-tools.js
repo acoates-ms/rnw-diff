@@ -66,7 +66,7 @@ function createNewRelease(newRelease, rnVersion, apptype) {
         appDir
       );
       runCmd(
-        `npx @react-native-community/cli init-windows --template old/uwp-${apptype}-app`,
+        `npx @react-native-community/cli init-windows --template old/uwp-${apptype}-app --overwrite`,
         appDir
       );
     } else {
