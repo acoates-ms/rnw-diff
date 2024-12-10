@@ -60,10 +60,22 @@ function createNewRelease(newRelease, rnVersion, apptype) {
       appDir
     );
   } else {
-    runCmd(
-      `npx --yes react-native-windows-init --version ${newRelease} --overwrite --language ${apptype}`,
-      appDir
-    );
+    if (semver.compare(newRelease, '0.76.0-0') === 1) {
+      runCmd(
+        `yarn add react-native-windows@${newRelease}`,
+        appDir
+      );
+      runCmd(
+        `npx @react-native-community/cli init-windows --template old/uwp-${apptype}-app`,
+        appDir
+      );
+    } else {
+      runCmd(
+        `npx --yes react-native-windows-init --version ${newRelease} --overwrite --language ${apptype}`,
+        appDir
+      );
+    }
+
     // Modify some files to prevent new guids being generated and showing up in the diffs
     runCmd(`node ../standardizeProj.js`, wtAppPath);
   }
