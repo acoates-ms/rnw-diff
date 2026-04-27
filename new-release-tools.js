@@ -60,15 +60,24 @@ function createNewRelease(newRelease, rnVersion, apptype) {
       appDir
     );
   } else {
+    // After 0.76, the init workflow changed to installing react-native-windows manually, then running init-windows.
     if (semver.compare(newRelease, '0.76.0-0') === 1) {
       runCmd(
         `yarn add react-native-windows@${newRelease}`,
         appDir
       );
-      runCmd(
-        `npx @react-native-community/cli init-windows --template old/uwp-${apptype}-app --overwrite`,
-        appDir
-      );
+      // 0.82+ no longer ships with the paper template - use the default fabric one
+      if (semver.compare(newRelease, '0.82.0-0') === 1) {
+        runCmd(
+          `npx @react-native-community/cli init-windows --overwrite`,
+          appDir
+        );
+      } else {
+        runCmd(
+          `npx @react-native-community/cli init-windows --template old/uwp-${apptype}-app --overwrite`,
+          appDir
+        );
+      }
     } else {
       runCmd(
         `npx --yes react-native-windows-init --version ${newRelease} --overwrite --language ${apptype}`,
