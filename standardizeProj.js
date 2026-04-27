@@ -3,8 +3,10 @@
 const { readFileSync, writeFileSync, existsSync } = require("fs");
 // We always use this GUID to represent the apps project guid
 const standardAppProjectGuid = "{UNIQUE00-APP0-GUID-GOES-HERE00000000}";
+const standardAppPackageProjectGuid = "{UNIQUE00-PKG0-GUID-GOES-HERE00000000}";
+
 // We always use this GUID to represent the apps appx guid
-const appxApplicationGuid =    "{UNIQUE00-APPX-GUID-GOES-HERE00000000}";
+const appxApplicationGuid = "{UNIQUE00-APPX-GUID-GOES-HERE00000000}";
 
 const appName = "RnDiffApp";
 let projectGuid = "";
@@ -59,8 +61,34 @@ function standardizeAppsCppProjectFile() {
   );
 }
 
+function standardizePackageProjectFile() {
+  const appProjPath = `./${appName}/windows/${appName}.Package/${appName}.vcxproj`;
+
+  if (!existsSync(appProjPath)) {
+    return;
+  }
+
+  const appProj = readFileSync(appProjPath);
+
+  writeFileSync(
+    appProjPath,
+    appProj
+      .toString()
+      .replace(
+        new RegExp(`<ProjectGuid>.*</ProjectGuid>`),
+        `<ProjectGuid>${standardAppPackageProjectGuid}</ProjectGuid>`
+      )
+      .replace(
+        new RegExp(
+          `<PackageCertificateThumbprint>.*</PackageCertificateThumbprint>`
+        ),
+        "<PackageCertificateThumbprint>UniqueThumbPrintHere</PackageCertificateThumbprint>"
+      )
+  );
+}
+
 function standardizeAppxManifest() {
-  const appxManPath = `./${appName}/windows/${appName}/Package.appxmanifest`;
+  const appxManPath = existsSync(`./${appName}/windows/${appName}.Package/Package.appxmanifest`) ? `./${appName}/windows/${appName}.Package/Package.appxmanifest` : `./${appName}/windows/${appName}/Package.appxmanifest`;
   const appxMan = readFileSync(appxManPath);
 
   console.log(appxMan.toString());
@@ -93,4 +121,5 @@ function standardizeAppxManifest() {
 
 standardizeSolutionFile();
 standardizeAppsCppProjectFile();
+standardizePackageProjectFile();
 standardizeAppxManifest();
