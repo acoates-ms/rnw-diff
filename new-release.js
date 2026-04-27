@@ -99,11 +99,11 @@ function run() {
   }
 
   if (apptype === "both") {
+    generateDiffs(rnwVersion, 'cpp');
     // 0.82+ does not have a cs template
     if ((semver.compare(rnVersion, '0.82.0-0') === -1)) {
-      generateDiffs(rnwVersion, 'cpp');
+      generateDiffs(rnwVersion, 'cs');
     }
-    generateDiffs(rnwVersion, 'cs');
   } else {
     generateDiffs(rnwVersion, apptype);
   }
